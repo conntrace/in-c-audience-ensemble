@@ -15,9 +15,24 @@ export class Ensemble extends EventTarget {
     this._spreadRelaxed = false;
   }
 
+  // Check whether the opening gate is still active: all online musicians
+  // must reach Pattern 1 (unit 2) before anyone can advance past it.
+  _isOpeningGateActive() {
+    const allOnline = this.musicians.filter(mu => !mu.offline);
+    return !allOnline.every(mu => mu.currentUnit >= 2);
+  }
+
   // Called when a specific musician's pattern loop completes (per-musician timing)
   onMusicianLoopComplete(musicianId) {
     const m = this.musicians[musicianId];
+
+    // Enforce opening gate at advance time: if this musician is already at
+    // unit 2+ and the gate is still active, cancel any queued advance so
+    // they keep looping Pattern 1 until everyone catches up.
+    if (m.currentUnit >= 2 && m.advanceQueued && this._isOpeningGateActive()) {
+      m.advanceQueued = false;
+    }
+
     const result = m.onLoopComplete();
 
     // Check resetAll end behavior
