@@ -43,6 +43,15 @@ export class Ensemble extends EventTarget {
     const m = this.musicians[musicianId];
     if (!m.canAdvance()) return false;
 
+    // Opening gate: all musicians must reach Pattern 1 (unit 2) — the first
+    // measure with sound — before anyone can advance beyond it. Advancing
+    // from silence (unit 1) to Pattern 1 (unit 2) is always allowed.
+    if (m.currentUnit >= 2) {
+      const allOnline = this.musicians.filter(mu => !mu.offline);
+      const allPlayingSound = allOnline.every(mu => mu.currentUnit >= 2);
+      if (!allPlayingSound) return false;
+    }
+
     // Catch-up allowance: most-behind musicians are always eligible
     const minUnit = this.getMinUnit();
     if (m.currentUnit === minUnit) return true;
