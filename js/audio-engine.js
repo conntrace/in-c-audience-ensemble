@@ -46,19 +46,31 @@ class MusicianVoice {
     const patternDurationEighths = getPatternDuration(patternIndex);
     const eighthNoteSec = unitDurationSec / patternDurationEighths;
 
-    let noteTime = startTime;
-    for (const event of pattern) {
-      const noteDurSec = event.duration * eighthNoteSec;
+    // Grace note duration: very short, steal time from next note
+    const GRACE_NOTE_SEC = 0.06;
 
-      if (event.note !== 0) {
+    let noteTime = startTime;
+    for (let i = 0; i < pattern.length; i++) {
+      const event = pattern[i];
+      let noteDurSec;
+
+      if (event.duration === 0) {
+        // Grace note — play very short, don't advance time
+        noteDurSec = GRACE_NOTE_SEC;
+      } else {
+        noteDurSec = event.duration * eighthNoteSec;
+      }
+
+      if (event.note !== 0 && event.note !== undefined) {
         const midi = event.note + this.octaveOffset;
         const noteName = midiToNoteName(midi);
         const when = noteTime;
-        const dur = noteDurSec * 0.95;
+        const dur = Math.max(noteDurSec * 0.95, 0.03);
 
-        if (dur > 0.01 && when >= audioCtxTime - 0.01) {
+        if (when >= audioCtxTime - 0.01) {
           try {
-            const node = this.instrument.play(noteName, when, { duration: dur, gain: 1.2 });
+            const gain = event.duration === 0 ? 0.8 : 1.2; // grace notes slightly softer
+            const node = this.instrument.play(noteName, when, { duration: dur, gain });
             if (node) this._activeNodes.push(node);
           } catch (e) {
             // Ignore scheduling errors
@@ -66,7 +78,12 @@ class MusicianVoice {
         }
       }
 
-      noteTime += noteDurSec;
+      // Grace notes advance time by their short duration
+      if (event.duration === 0) {
+        noteTime += GRACE_NOTE_SEC;
+      } else {
+        noteTime += noteDurSec;
+      }
     }
   }
 
