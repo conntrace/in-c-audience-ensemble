@@ -184,7 +184,7 @@ Reverted the demo button from inline (with musician buttons) back to the full-sc
 ---
 
 ### v1.1.0 — Tone.js as Alternative Audio Source
-**Commit:** TBD | **Date:** 2026-02-18
+**Commit:** `912ac21` | **Date:** 2026-02-18
 
 Added Tone.js with the tonejs-instruments sample library as a selectable alternative to the existing soundfont-player. Users can now switch between two audio sources:
 
