@@ -183,6 +183,19 @@ Reverted the demo button from inline (with musician buttons) back to the full-sc
 
 ---
 
+### v1.1.1 — Opening Gate for Pattern 1
+**Commit:** `bf9c053` | **Date:** 2026-02-18
+
+Added an opening gate to the ensemble eligibility system. All online musicians must reach Pattern 1 (the first sounding measure) before any musician can advance beyond it. This mirrors the traditional *In C* performance practice where the ensemble begins together in unison.
+
+- **Gate logic** added to `ensemble.isEligible()` — musicians at unit 2+ are blocked until every online musician has also reached unit 2+
+- Advancing from silence (Pattern 0) to Pattern 1 is always allowed so musicians can catch up
+- Gate is one-time: once all musicians are playing sound, normal spread rules take over
+- Works with both manual presses and demo mode (both go through `isEligible()`)
+- **File changed:** `js/ensemble.js` (9 lines added)
+
+---
+
 ### v1.1.0 — Tone.js as Alternative Audio Source
 **Commit:** `912ac21` | **Date:** 2026-02-18
 
