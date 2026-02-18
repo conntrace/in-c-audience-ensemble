@@ -16,11 +16,18 @@ function midiToNoteName(midi) {
 
 // Per-instrument volume scaling — heavier instruments sit further back in the mix
 const INSTRUMENT_GAIN = {
+  // Brass
+  french_horn: 0.65,
+  trombone: 0.6,
+  trumpet: 0.7,
+  tuba: 0.5,
+  // Strings
   contrabass: 0.5,
   cello: 0.7,
   viola: 0.75,
   string_ensemble_1: 0.55,
   string_ensemble_2: 0.55,
+  // Other
   celesta: 1.0,
   music_box: 0.9,
 };

@@ -34,81 +34,49 @@ html, body {
   width: 100vw;
 }
 
-/* Start Overlay */
-#start-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: var(--bg);
-  z-index: 50;
+/* Demo Play Button (inline with musician buttons) */
+#demo-row {
   display: flex;
   justify-content: center;
+  margin-top: 14px;
+}
+
+.demo-play-btn {
+  display: flex;
   align-items: center;
-  transition: opacity 0.8s ease, visibility 0.8s ease;
-}
-
-#start-overlay.hidden {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-}
-
-.start-content {
-  text-align: center;
-}
-
-.start-title {
-  font-size: 72px;
-  font-weight: 300;
-  letter-spacing: 12px;
-  color: var(--text);
-  margin-bottom: 8px;
-}
-
-.start-subtitle {
-  font-size: 14px;
-  letter-spacing: 4px;
-  text-transform: uppercase;
-  color: var(--text-dim);
-  margin-bottom: 60px;
-}
-
-.play-btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+  gap: 10px;
   background: none;
-  border: none;
+  border: 2px solid var(--accent);
   color: var(--accent);
   cursor: pointer;
-  padding: 20px;
-  border-radius: 50%;
-  transition: all 0.3s ease;
+  padding: 10px 24px;
+  border-radius: 30px;
+  transition: all 0.2s ease;
   outline: none;
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: bold;
+  letter-spacing: 2px;
+  text-transform: uppercase;
 }
 
-.play-btn:hover {
+.demo-play-btn:hover {
+  background: var(--accent);
   color: #fff;
-  transform: scale(1.1);
-  filter: drop-shadow(0 0 20px rgba(255, 107, 53, 0.5));
+  box-shadow: 0 0 20px rgba(255, 107, 53, 0.3);
 }
 
-.play-btn:active {
+.demo-play-btn:active {
   transform: scale(0.95);
 }
 
-.play-btn svg {
-  width: 80px;
-  height: 80px;
+.demo-play-btn.active {
+  background: var(--accent);
+  color: #fff;
 }
 
-.start-hint {
-  margin-top: 40px;
-  font-size: 12px;
-  color: var(--text-dim);
-  letter-spacing: 1px;
+.demo-play-btn svg {
+  flex-shrink: 0;
 }
 
 /* Score Display */

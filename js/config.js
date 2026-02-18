@@ -72,16 +72,16 @@ export const ALL_INSTRUMENTS = Object.values(INSTRUMENT_BANK).flat();
 
 // Default musician configurations
 const DEFAULT_MUSICIANS = [
-  { label: 'A', color: '#FF4136', instrument: 'cello',               octaveOffset: -12 },
-  { label: 'B', color: '#FF851B', instrument: 'cello',               octaveOffset: 0 },
-  { label: 'C', color: '#FFDC00', instrument: 'viola',               octaveOffset: 0 },
-  { label: 'D', color: '#2ECC40', instrument: 'viola',               octaveOffset: -12 },
-  { label: 'E', color: '#0074D9', instrument: 'string_ensemble_1',   octaveOffset: -12 },
-  { label: 'F', color: '#B10DC9', instrument: 'string_ensemble_1',   octaveOffset: 0 },
-  { label: 'G', color: '#F012BE', instrument: 'contrabass',          octaveOffset: 0 },
-  { label: 'H', color: '#01FF70', instrument: 'contrabass',          octaveOffset: -12 },
-  { label: 'I', color: '#7FDBFF', instrument: 'celesta',             octaveOffset: 0 },
-  { label: 'J', color: '#AAAAAA', instrument: 'music_box',           octaveOffset: 12 },
+  { label: 'A', color: '#FF4136', instrument: 'french_horn',         octaveOffset: 0 },
+  { label: 'B', color: '#FF851B', instrument: 'trombone',            octaveOffset: 0 },
+  { label: 'C', color: '#FFDC00', instrument: 'trumpet',             octaveOffset: 0 },
+  { label: 'D', color: '#2ECC40', instrument: 'tuba',                octaveOffset: -12 },
+  { label: 'E', color: '#0074D9', instrument: 'contrabass',          octaveOffset: -12 },
+  { label: 'F', color: '#B10DC9', instrument: 'contrabass',          octaveOffset: 0 },
+  { label: 'G', color: '#F012BE', instrument: 'cello',               octaveOffset: 0 },
+  { label: 'H', color: '#01FF70', instrument: 'viola',               octaveOffset: 0 },
+  { label: 'I', color: '#7FDBFF', instrument: 'string_ensemble_1',   octaveOffset: 0 },
+  { label: 'J', color: '#AAAAAA', instrument: 'string_ensemble_1',   octaveOffset: -12 },
 ];
 
 // A pool of colors for when users add new musicians beyond the defaults
@@ -97,7 +97,7 @@ const STORAGE_KEY_SETTINGS = 'inC_settings';
 
 export const CONFIG = {
   // Tempo and timing
-  bpm: 80,
+  bpm: 120,
   beatsPerUnit: 4,
 
   // Composition
@@ -105,7 +105,7 @@ export const CONFIG = {
   endBehavior: 'wrap',
 
   // Ensemble rules
-  maxSpread: 5,
+  maxSpread: 3,
   deadlockTimeoutMs: 10000,
 
   // Musicians array — the source of truth
@@ -194,9 +194,9 @@ export const CONFIG = {
 
   resetToDefaults() {
     this.musicians = JSON.parse(JSON.stringify(DEFAULT_MUSICIANS));
-    this.bpm = 80;
+    this.bpm = 120;
     this.beatsPerUnit = 4;
-    this.maxSpread = 5;
+    this.maxSpread = 3;
     this.endBehavior = 'wrap';
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(STORAGE_KEY_SETTINGS);
