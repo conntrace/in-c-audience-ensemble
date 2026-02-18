@@ -30,10 +30,6 @@ class AdminPage {
       CONFIG.maxSpread = Math.max(1, Math.min(30, parseInt(e.target.value) || 5));
       e.target.value = CONFIG.maxSpread;
     });
-    document.getElementById('setting-beats').addEventListener('change', (e) => {
-      CONFIG.beatsPerUnit = Math.max(1, Math.min(16, parseInt(e.target.value) || 4));
-      e.target.value = CONFIG.beatsPerUnit;
-    });
     document.getElementById('setting-end').addEventListener('change', (e) => {
       CONFIG.endBehavior = e.target.value;
     });
@@ -63,7 +59,6 @@ class AdminPage {
   _syncSettingsUI() {
     document.getElementById('setting-bpm').value = CONFIG.bpm;
     document.getElementById('setting-spread').value = CONFIG.maxSpread;
-    document.getElementById('setting-beats').value = CONFIG.beatsPerUnit;
     document.getElementById('setting-end').value = CONFIG.endBehavior;
   }
 

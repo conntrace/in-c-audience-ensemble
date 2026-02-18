@@ -15,27 +15,27 @@ export class Ensemble extends EventTarget {
     this._spreadRelaxed = false;
   }
 
-  // Called at each boundary by the clock
-  onBoundary(detail) {
-    // Process all musicians
-    for (const m of this.musicians) {
-      m.onBoundary();
-    }
+  // Called when a specific musician's pattern loop completes (per-musician timing)
+  onMusicianLoopComplete(musicianId) {
+    const m = this.musicians[musicianId];
+    const result = m.onLoopComplete();
 
     // Check resetAll end behavior
-    if (CONFIG.endBehavior === 'resetAll') {
+    if (result.advanced && CONFIG.endBehavior === 'resetAll') {
       const allAtEnd = this.musicians.every(m => m.currentUnit >= CONFIG.totalUnits);
       if (allAtEnd) {
         this.reset();
         this.dispatchEvent(new CustomEvent('resetAll'));
-        return;
+        return result;
       }
     }
 
-    // Check deadlock
+    // Re-check deadlock after any state change
     this._checkDeadlock();
 
-    this.dispatchEvent(new CustomEvent('stateChange', { detail }));
+    this.dispatchEvent(new CustomEvent('stateChange', { detail: { musicianId } }));
+
+    return result;
   }
 
   // Full eligibility check for a musician (includes spread)

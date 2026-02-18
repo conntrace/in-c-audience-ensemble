@@ -27,12 +27,18 @@ export class ScoreDisplay {
   }
 
   update() {
+    // Can still be called externally, but _animate reads state every frame
     for (let i = 0; i < CONFIG.musicianCount; i++) {
       this.targetPositions[i] = this.ensemble.musicians[i].currentUnit;
     }
   }
 
   _animate() {
+    // Read current state every frame — musicians advance asynchronously
+    for (let i = 0; i < CONFIG.musicianCount; i++) {
+      this.targetPositions[i] = this.ensemble.musicians[i].currentUnit;
+    }
+
     // Smooth interpolation toward target
     for (let i = 0; i < CONFIG.musicianCount; i++) {
       const diff = this.targetPositions[i] - this.markerPositions[i];

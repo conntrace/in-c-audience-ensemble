@@ -13,23 +13,26 @@ export class Musician {
     this.offline = false;
   }
 
-  // Called at each unit boundary
-  onBoundary() {
-    if (this.offline) return;
+  // Called when this musician's pattern loop completes (per-musician timing)
+  onLoopComplete() {
+    if (this.offline) return { advanced: false };
 
-    // Phase 1: Clear cooldown from previous advance
-    // (cooldown lasts exactly one full unit after advancing)
+    // If cooldown was active (from a previous advance), clear it now
+    // that we've completed one full play of the new pattern
     if (this.cooldownActive && !this.advanceQueued) {
       this.cooldownActive = false;
-      return;
+      return { advanced: false };
     }
 
-    // Phase 2: Process queued advance
+    // If advance is queued, process it
     if (this.advanceQueued) {
       this.advanceQueued = false;
       this._advanceUnit();
       this.cooldownActive = true;
+      return { advanced: true, newUnit: this.currentUnit };
     }
+
+    return { advanced: false };
   }
 
   _advanceUnit() {

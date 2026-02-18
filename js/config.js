@@ -98,7 +98,6 @@ const STORAGE_KEY_SETTINGS = 'inC_settings';
 export const CONFIG = {
   // Tempo and timing
   bpm: 120,
-  beatsPerUnit: 4,
 
   // Composition
   totalUnits: 54,  // 0 (silence) + 53 patterns
@@ -146,9 +145,9 @@ export const CONFIG = {
   // Audio
   masterVolume: 0.5,
 
-  // Derived timing
-  get unitDurationSec() {
-    return (this.beatsPerUnit / this.bpm) * 60;
+  // Derived timing — natural eighth-note duration based on BPM
+  get eighthNoteSec() {
+    return 60 / this.bpm / 2;
   },
 
   // Persistence
@@ -157,7 +156,6 @@ export const CONFIG = {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.musicians));
       localStorage.setItem(STORAGE_KEY_SETTINGS, JSON.stringify({
         bpm: this.bpm,
-        beatsPerUnit: this.beatsPerUnit,
         maxSpread: this.maxSpread,
         endBehavior: this.endBehavior,
       }));
@@ -181,7 +179,6 @@ export const CONFIG = {
       if (savedSettings) {
         const s = JSON.parse(savedSettings);
         if (s.bpm) this.bpm = s.bpm;
-        if (s.beatsPerUnit) this.beatsPerUnit = s.beatsPerUnit;
         if (s.maxSpread) this.maxSpread = s.maxSpread;
         if (s.endBehavior) this.endBehavior = s.endBehavior;
         loaded = true;
@@ -195,7 +192,6 @@ export const CONFIG = {
   resetToDefaults() {
     this.musicians = JSON.parse(JSON.stringify(DEFAULT_MUSICIANS));
     this.bpm = 120;
-    this.beatsPerUnit = 4;
     this.maxSpread = 3;
     this.endBehavior = 'wrap';
     localStorage.removeItem(STORAGE_KEY);

@@ -1,7 +1,7 @@
 // In C: Audience Ensemble — Audio Engine (SoundFont Edition)
 // Uses soundfont-player to load real instrument samples.
 // Reads instrument assignments from CONFIG.musicians[].
-// Transitions happen only at unit boundaries.
+// Each musician loops their pattern independently at natural BPM tempo.
 
 import { CONFIG } from './config.js';
 import { PATTERNS, getPatternDuration } from './patterns.js';
@@ -32,14 +32,25 @@ const INSTRUMENT_GAIN = {
   music_box: 0.9,
 };
 
+// Grace note duration: very short ornament
+const GRACE_NOTE_SEC = 0.06;
+
+// How far ahead (in seconds) to fire the loop-end callback before audio finishes
+const LOOKAHEAD_SEC = 0.05;
+
 class MusicianVoice {
-  constructor(musicianId) {
+  constructor(musicianId, audioContext, ensemble) {
     this.id = musicianId;
+    this.ctx = audioContext;
+    this.ensemble = ensemble;
     this.instrument = null;
     this.instrumentName = '';
     this.currentUnit = 1;
     this._activeNodes = [];
     this._loaded = false;
+    this._running = false;
+    this._nextLoopTime = 0;
+    this._loopTimerId = null;
     // Each musician gets a fixed random offset seed for humanization
     this._humanizeOffset = (Math.random() - 0.5) * 0.04; // ±20ms fixed drift
   }
@@ -59,33 +70,89 @@ class MusicianVoice {
     this._loaded = true;
   }
 
-  scheduleUnit(unit, startTime, unitDurationSec, audioCtxTime) {
-    this.currentUnit = unit;
+  // Start the self-scheduling pattern loop
+  startLoop(startTime) {
+    this._running = true;
+    this._nextLoopTime = startTime;
+    this._scheduleNextLoop();
+  }
+
+  // Stop the loop and all playing notes
+  stopLoop() {
+    this._running = false;
+    if (this._loopTimerId !== null) {
+      clearTimeout(this._loopTimerId);
+      this._loopTimerId = null;
+    }
     this.stopAll();
+  }
 
-    if (!this._loaded || !this.instrument) return;
+  _scheduleNextLoop() {
+    if (!this._running || !this._loaded) return;
 
+    const unit = this.currentUnit;
     const patternIndex = unit - 1;
     if (patternIndex < 0 || patternIndex >= PATTERNS.length) return;
 
-    const pattern = PATTERNS[patternIndex];
+    const eighthNoteSec = CONFIG.eighthNoteSec; // Natural tempo from BPM
     const patternDurationEighths = getPatternDuration(patternIndex);
-    const eighthNoteSec = unitDurationSec / patternDurationEighths;
 
-    // Grace note duration: very short, steal time from next note
-    const GRACE_NOTE_SEC = 0.06;
+    // Calculate natural pattern duration (accounting for grace notes)
+    const pattern = PATTERNS[patternIndex];
+    let patternDurationSec = 0;
+    for (const event of pattern) {
+      if (event.duration === 0) {
+        patternDurationSec += GRACE_NOTE_SEC;
+      } else {
+        patternDurationSec += event.duration * eighthNoteSec;
+      }
+    }
 
-    // Humanization: slight per-note random timing jitter (±15ms)
-    // plus a fixed per-musician offset so voices aren't perfectly aligned
+    // Safety: ensure minimum loop time to avoid runaway timers
+    patternDurationSec = Math.max(patternDurationSec, 0.05);
+
+    // Schedule all notes for this pattern playthrough
+    this._schedulePatternNotes(patternIndex, this._nextLoopTime, eighthNoteSec);
+
+    // Calculate when this loop ends (= when the next loop starts)
+    const loopEndTime = this._nextLoopTime + patternDurationSec;
+
+    // Schedule a callback slightly before the loop ends to prepare the next one
+    const now = this.ctx.currentTime;
+    const delayMs = Math.max(0, (loopEndTime - now - LOOKAHEAD_SEC) * 1000);
+
+    this._loopTimerId = setTimeout(() => {
+      if (!this._running) return;
+
+      // Process loop completion through the ensemble
+      const result = this.ensemble.onMusicianLoopComplete(this.id);
+
+      if (result.advanced) {
+        this.currentUnit = result.newUnit;
+      }
+      // else: currentUnit stays the same, we loop the same pattern
+
+      this._nextLoopTime = loopEndTime;
+      this._scheduleNextLoop();
+    }, delayMs);
+  }
+
+  _schedulePatternNotes(patternIndex, startTime, eighthNoteSec) {
+    // Stop any previously playing notes for this voice
+    this.stopAll();
+
+    const pattern = PATTERNS[patternIndex];
+    if (!pattern) return;
+
     const baseOffset = this._humanizeOffset;
-
     let noteTime = startTime + baseOffset;
+
     for (let i = 0; i < pattern.length; i++) {
       const event = pattern[i];
       let noteDurSec;
 
       if (event.duration === 0) {
-        // Grace note — play very short, don't advance time
+        // Grace note — play very short
         noteDurSec = GRACE_NOTE_SEC;
       } else {
         noteDurSec = event.duration * eighthNoteSec;
@@ -96,10 +163,10 @@ class MusicianVoice {
         const noteName = midiToNoteName(midi);
         // Per-note jitter: small random offset
         const jitter = (Math.random() - 0.5) * 0.03; // ±15ms
-        const when = Math.max(noteTime + jitter, audioCtxTime);
+        const when = Math.max(noteTime + jitter, this.ctx.currentTime);
         const dur = Math.max(noteDurSec * 0.95, 0.03);
 
-        if (when >= audioCtxTime - 0.01) {
+        if (when >= this.ctx.currentTime - 0.01) {
           try {
             const baseVol = this._baseGain;
             const gain = event.duration === 0
@@ -113,7 +180,7 @@ class MusicianVoice {
         }
       }
 
-      // Grace notes advance time by their short duration
+      // Advance time
       if (event.duration === 0) {
         noteTime += GRACE_NOTE_SEC;
       } else {
@@ -131,8 +198,9 @@ class MusicianVoice {
 }
 
 export class AudioEngine {
-  constructor(audioContext) {
+  constructor(audioContext, ensemble) {
     this.ctx = audioContext;
+    this.ensemble = ensemble;
 
     // Master gain
     this.masterGain = this.ctx.createGain();
@@ -152,11 +220,11 @@ export class AudioEngine {
   _rebuildVoices() {
     // Stop existing voices
     for (const v of this.voices) {
-      v.stopAll();
+      v.stopLoop();
     }
     this.voices = [];
     for (let i = 0; i < CONFIG.musicianCount; i++) {
-      this.voices.push(new MusicianVoice(i));
+      this.voices.push(new MusicianVoice(i, this.ctx, this.ensemble));
     }
   }
 
@@ -212,19 +280,7 @@ export class AudioEngine {
     console.log('AudioEngine: All instruments loaded!');
   }
 
-  // Schedule the current unit for all musicians at a boundary
-  onBoundary(musicians, boundaryTime) {
-    if (!this._running || !this._loaded) return;
-    const duration = CONFIG.unitDurationSec;
-
-    for (let i = 0; i < musicians.length; i++) {
-      const m = musicians[i];
-      if (!m.offline && this.voices[i]) {
-        this.voices[i].scheduleUnit(m.currentUnit, boundaryTime, duration, this.ctx.currentTime);
-      }
-    }
-  }
-
+  // Start all musician loops independently
   start(musicians) {
     this._running = true;
     if (!this._loaded) {
@@ -232,18 +288,19 @@ export class AudioEngine {
       return;
     }
     const now = this.ctx.currentTime;
-    const duration = CONFIG.unitDurationSec;
     for (let i = 0; i < musicians.length; i++) {
       if (!musicians[i].offline && this.voices[i]) {
-        this.voices[i].scheduleUnit(musicians[i].currentUnit, now, duration, now);
+        this.voices[i].currentUnit = musicians[i].currentUnit;
+        this.voices[i].startLoop(now);
       }
     }
   }
 
+  // Stop all musician loops
   stop() {
     this._running = false;
     for (const v of this.voices) {
-      v.stopAll();
+      v.stopLoop();
     }
   }
 

@@ -34,7 +34,7 @@ class App {
     // Core systems
     this.clock = new Clock(this.audioCtx);
     this.ensemble = new Ensemble();
-    this.audioEngine = new AudioEngine(this.audioCtx);
+    this.audioEngine = new AudioEngine(this.audioCtx, this.ensemble);
 
     // UI
     this.buttons = new ButtonController(this.ensemble);
@@ -50,8 +50,7 @@ class App {
       onDemoToggle: () => this._toggleDemo(),
     });
 
-    // Wire events
-    this.clock.addEventListener('boundary', (e) => this._onBoundary(e));
+    // Wire events — musicians advance independently via audio engine loops
     this.ensemble.addEventListener('stateChange', () => this._updateUI());
     this.ensemble.addEventListener('queued', () => this._updateUI());
 
@@ -105,6 +104,14 @@ class App {
     // Sync operator panel with loaded config
     this.operatorPanel.syncFromConfig();
 
+    // Periodic UI updater — replaces boundary-driven updates
+    // Score display has its own rAF loop; this handles status bar
+    this._uiIntervalId = setInterval(() => {
+      if (this.running) {
+        this._updateStatus();
+      }
+    }, 100);
+
     // Initial UI state
     this._updateUI();
     this._updateStatus();
@@ -155,20 +162,6 @@ class App {
     this._updateStatus();
   }
 
-  _onBoundary(e) {
-    const detail = e.detail;
-
-    // Process ensemble state transitions
-    this.ensemble.onBoundary(detail);
-
-    // Schedule audio for the new unit state
-    this.audioEngine.onBoundary(this.ensemble.musicians, this.audioCtx.currentTime);
-
-    // Update UI
-    this._updateUI();
-    this._updateStatus();
-  }
-
   _updateUI() {
     this.buttons.updateStates();
     this.scoreDisplay.update();
@@ -186,7 +179,7 @@ class App {
       ? (this.demoMode.active ? 'Demo' : 'Running')
       : 'Stopped';
     document.getElementById('status-beat').textContent = this.running
-      ? this.clock.boundaryCount
+      ? this.clock.getElapsedBeats()
       : '-';
   }
 
