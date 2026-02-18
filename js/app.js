@@ -9,6 +9,7 @@ import { ScoreDisplay } from './score-display.js';
 import { AudioEngine } from './audio-engine.js';
 import { OperatorPanel } from './operator-panel.js';
 import { DemoMode } from './demo-mode.js';
+import { mapInstrumentToSource } from './instrument-sources.js';
 
 class App {
   constructor() {
@@ -31,6 +32,11 @@ class App {
     // Create AudioContext (lazy — needs user gesture)
     this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
+    // Initialize Tone.js to use the same AudioContext for timing alignment
+    if (window.Tone) {
+      Tone.setContext(this.audioCtx);
+    }
+
     // Core systems
     this.clock = new Clock(this.audioCtx);
     this.ensemble = new Ensemble();
@@ -48,6 +54,7 @@ class App {
       onReset: () => this.reset(),
       onConfigChange: () => this._onConfigChange(),
       onDemoToggle: () => this._toggleDemo(),
+      onAudioSourceChange: (source) => this._onAudioSourceChange(source),
     });
 
     // Wire events — musicians advance independently via audio engine loops
@@ -197,6 +204,29 @@ class App {
     this.clock.updateTempo();
     this.scoreDisplay.update();
     this._updateUI();
+    this._updateStatus();
+  }
+
+  async _onAudioSourceChange(source) {
+    // Stop playback while switching
+    const wasRunning = this.running;
+    if (wasRunning) this.pause();
+
+    // Remap all musician instruments to the new source
+    for (const m of CONFIG.musicians) {
+      m.instrument = mapInstrumentToSource(m.instrument, source);
+    }
+    CONFIG.audioSource = source;
+
+    // Reload instruments for the new source
+    this._instrumentsLoaded = false;
+    this._setStatusMessage('Switching audio source...');
+    await this.audioEngine.loadInstruments();
+    this._instrumentsLoaded = true;
+    this._setStatusMessage(null);
+
+    // Resume if was running
+    if (wasRunning) await this.start();
     this._updateStatus();
   }
 

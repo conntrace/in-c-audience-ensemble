@@ -1,7 +1,15 @@
 // In C — Admin Page Logic
 // Manages musician configuration: add/remove, color, instrument, octave offset.
+// Supports both SoundFont and Tone.js audio sources.
 
 import { CONFIG, INSTRUMENT_BANK } from './config.js';
+import {
+  TONEJS_INSTRUMENT_BANK,
+  mapInstrumentToSource,
+  loadToneJSInstrument,
+  loadSoundfontInstrument,
+  initToneContext,
+} from './instrument-sources.js';
 
 class AdminPage {
   constructor() {
@@ -34,6 +42,23 @@ class AdminPage {
       CONFIG.endBehavior = e.target.value;
     });
 
+    // Audio source selector
+    document.getElementById('setting-audio-source').addEventListener('change', (e) => {
+      const newSource = e.target.value;
+
+      // Remap all musician instruments to the new source
+      for (const m of CONFIG.musicians) {
+        m.instrument = mapInstrumentToSource(m.instrument, newSource);
+      }
+      CONFIG.audioSource = newSource;
+
+      // Clear preview cache (instruments are source-specific)
+      this.previewInstrumentCache = {};
+
+      // Re-render rows (instrument dropdowns change)
+      this._renderAll();
+    });
+
     // Wire buttons
     document.getElementById('btn-add-musician').addEventListener('click', () => {
       CONFIG.addMusician();
@@ -60,6 +85,7 @@ class AdminPage {
     document.getElementById('setting-bpm').value = CONFIG.bpm;
     document.getElementById('setting-spread').value = CONFIG.maxSpread;
     document.getElementById('setting-end').value = CONFIG.endBehavior;
+    document.getElementById('setting-audio-source').value = CONFIG.audioSource;
   }
 
   _renderAll() {
@@ -120,10 +146,11 @@ class AdminPage {
     labelInput.style.color = m.color;
     colorWrapper.appendChild(colorInput);
 
-    // Instrument select (grouped by category)
+    // Instrument select — dynamic based on audio source
     const instrumentSelect = document.createElement('select');
     instrumentSelect.className = 'instrument-select';
-    for (const [category, instruments] of Object.entries(INSTRUMENT_BANK)) {
+    const bank = CONFIG.audioSource === 'tonejs' ? TONEJS_INSTRUMENT_BANK : INSTRUMENT_BANK;
+    for (const [category, instruments] of Object.entries(bank)) {
       const group = document.createElement('optgroup');
       group.label = category;
       for (const inst of instruments) {
@@ -204,24 +231,31 @@ class AdminPage {
       await this.audioCtx.resume();
     }
 
-    const Soundfont = window.Soundfont;
-    if (!Soundfont) return;
+    // Cache key includes source to avoid cross-source collisions
+    const cacheKey = `${CONFIG.audioSource}:${instrumentName}`;
 
     // Load instrument if not cached
-    if (!this.previewInstrumentCache[instrumentName]) {
+    if (!this.previewInstrumentCache[cacheKey]) {
       try {
-        this.previewInstrumentCache[instrumentName] = await Soundfont.instrument(
-          this.audioCtx, instrumentName, { soundfont: 'MusyngKite' }
-        );
+        if (CONFIG.audioSource === 'tonejs') {
+          if (window.Tone) {
+            initToneContext(this.audioCtx);
+          }
+          this.previewInstrumentCache[cacheKey] = await loadToneJSInstrument(instrumentName);
+        } else {
+          this.previewInstrumentCache[cacheKey] = await loadSoundfontInstrument(
+            this.audioCtx, instrumentName
+          );
+        }
       } catch (e) {
         console.error('Failed to load preview instrument:', e);
         return;
       }
     }
 
-    const inst = this.previewInstrumentCache[instrumentName];
+    const inst = this.previewInstrumentCache[cacheKey];
 
-    // Play a short C major arpeggio
+    // Play a short C major arpeggio — works for both sources via adapter
     const baseNotes = [60, 64, 67, 72]; // C4, E4, G4, C5
     const now = this.audioCtx.currentTime;
     for (let i = 0; i < baseNotes.length; i++) {
@@ -235,7 +269,7 @@ class AdminPage {
 
   _formatInstrumentName(name) {
     return name
-      .replace(/_/g, ' ')
+      .replace(/[-_]/g, ' ')
       .replace(/\b\w/g, c => c.toUpperCase());
   }
 

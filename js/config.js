@@ -99,6 +99,9 @@ export const CONFIG = {
   // Tempo and timing
   bpm: 120,
 
+  // Audio source: 'soundfont' (128 GM instruments) or 'tonejs' (20 sampled instruments)
+  audioSource: 'soundfont',
+
   // Composition
   totalUnits: 54,  // 0 (silence) + 53 patterns
   endBehavior: 'wrap',
@@ -158,6 +161,7 @@ export const CONFIG = {
         bpm: this.bpm,
         maxSpread: this.maxSpread,
         endBehavior: this.endBehavior,
+        audioSource: this.audioSource,
       }));
     } catch (e) {
       console.warn('Failed to save config:', e);
@@ -181,6 +185,7 @@ export const CONFIG = {
         if (s.bpm) this.bpm = s.bpm;
         if (s.maxSpread) this.maxSpread = s.maxSpread;
         if (s.endBehavior) this.endBehavior = s.endBehavior;
+        if (s.audioSource) this.audioSource = s.audioSource;
         loaded = true;
       }
     } catch (e) {
@@ -194,6 +199,7 @@ export const CONFIG = {
     this.bpm = 120;
     this.maxSpread = 3;
     this.endBehavior = 'wrap';
+    this.audioSource = 'soundfont';
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(STORAGE_KEY_SETTINGS);
   },
@@ -202,10 +208,11 @@ export const CONFIG = {
     const idx = this.musicians.length;
     const label = idx < 26 ? String.fromCharCode(65 + idx) : `M${idx + 1}`;
     const color = EXTRA_COLORS[idx % EXTRA_COLORS.length];
+    const defaultInstrument = this.audioSource === 'tonejs' ? 'piano' : 'acoustic_grand_piano';
     this.musicians.push({
       label,
       color,
-      instrument: 'acoustic_grand_piano',
+      instrument: defaultInstrument,
       octaveOffset: 0,
     });
   },

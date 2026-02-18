@@ -1,10 +1,15 @@
-// In C: Audience Ensemble — Audio Engine (SoundFont Edition)
-// Uses soundfont-player to load real instrument samples.
+// In C: Audience Ensemble — Audio Engine
+// Supports SoundFont (128 GM instruments) and Tone.js (20 sampled instruments).
 // Reads instrument assignments from CONFIG.musicians[].
 // Each musician loops their pattern independently at natural BPM tempo.
 
 import { CONFIG } from './config.js';
 import { PATTERNS, getPatternDuration } from './patterns.js';
+import {
+  loadSoundfontInstrument,
+  loadToneJSInstrument,
+  initToneContext,
+} from './instrument-sources.js';
 
 // Convert MIDI number to note name (e.g., 60 → "C4")
 function midiToNoteName(midi) {
@@ -30,6 +35,12 @@ const INSTRUMENT_GAIN = {
   // Other
   celesta: 1.0,
   music_box: 0.9,
+  // Tone.js names (hyphenated)
+  'french-horn': 0.65,
+  'bass-electric': 0.5,
+  'guitar-acoustic': 0.8,
+  'guitar-electric': 0.8,
+  'guitar-nylon': 0.8,
 };
 
 // Grace note duration: very short ornament
@@ -237,28 +248,31 @@ export class AudioEngine {
     // Rebuild voices to match current config
     this._rebuildVoices();
 
-    console.log('AudioEngine: Loading instruments...');
-    const Soundfont = window.Soundfont;
+    const source = CONFIG.audioSource;
+    console.log(`AudioEngine: Loading instruments (source: ${source})...`);
 
-    if (!Soundfont) {
-      console.error('AudioEngine: Soundfont library not loaded!');
-      this._loading = false;
-      return;
+    // Initialize Tone.js context if needed
+    if (source === 'tonejs' && window.Tone) {
+      initToneContext(this.ctx);
     }
 
     // Determine unique instruments needed
     const uniqueInstruments = [...new Set(CONFIG.musicians.map(m => m.instrument))];
 
     // Load unique instruments (use cache when possible)
+    // Cache key is source:name to prevent cross-source collisions
     for (const name of uniqueInstruments) {
-      if (!this._loadedInstrumentCache[name]) {
-        console.log(`  Loading ${name}...`);
+      const cacheKey = `${source}:${name}`;
+      if (!this._loadedInstrumentCache[cacheKey]) {
+        console.log(`  Loading ${name} (${source})...`);
         try {
-          const inst = await Soundfont.instrument(this.ctx, name, {
-            soundfont: 'MusyngKite',
-            destination: this.masterGain,
-          });
-          this._loadedInstrumentCache[name] = inst;
+          let inst;
+          if (source === 'tonejs') {
+            inst = await loadToneJSInstrument(name, this.masterGain);
+          } else {
+            inst = await loadSoundfontInstrument(this.ctx, name, this.masterGain);
+          }
+          this._loadedInstrumentCache[cacheKey] = inst;
           console.log(`  + ${name} loaded`);
         } catch (err) {
           console.error(`  x Failed to load ${name}:`, err);
@@ -269,7 +283,8 @@ export class AudioEngine {
     // Assign cached instruments to voices
     for (let i = 0; i < CONFIG.musicianCount; i++) {
       const instrumentName = CONFIG.musicians[i].instrument;
-      const inst = this._loadedInstrumentCache[instrumentName];
+      const cacheKey = `${source}:${instrumentName}`;
+      const inst = this._loadedInstrumentCache[cacheKey];
       if (inst) {
         this.voices[i].setInstrument(inst, instrumentName);
       }
