@@ -17,6 +17,11 @@
 
 export const PATTERNS = [
 
+  // Pattern 0: Silence — all musicians begin here, a moment of stillness
+  [
+    { note: 0, duration: 8 },   // rest (whole note of silence)
+  ],
+
   // Pattern 1: grace-note C4 into E4 quarter, repeated 3 times
   [
     { note: 60, duration: 0 },   // C4 grace note

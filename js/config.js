@@ -101,7 +101,7 @@ export const CONFIG = {
   beatsPerUnit: 4,
 
   // Composition
-  totalUnits: 53,
+  totalUnits: 54,  // 0 (silence) + 53 patterns
   endBehavior: 'wrap',
 
   // Ensemble rules
