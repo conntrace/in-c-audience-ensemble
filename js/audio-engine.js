@@ -14,13 +14,27 @@ function midiToNoteName(midi) {
   return `${note}${octave}`;
 }
 
+// Per-instrument volume scaling — heavier instruments sit further back in the mix
+const INSTRUMENT_GAIN = {
+  contrabass: 0.5,
+  cello: 0.7,
+  viola: 0.75,
+  string_ensemble_1: 0.55,
+  string_ensemble_2: 0.55,
+  celesta: 1.0,
+  music_box: 0.9,
+};
+
 class MusicianVoice {
   constructor(musicianId) {
     this.id = musicianId;
     this.instrument = null;
+    this.instrumentName = '';
     this.currentUnit = 1;
     this._activeNodes = [];
     this._loaded = false;
+    // Each musician gets a fixed random offset seed for humanization
+    this._humanizeOffset = (Math.random() - 0.5) * 0.04; // ±20ms fixed drift
   }
 
   get octaveOffset() {
@@ -28,8 +42,13 @@ class MusicianVoice {
     return m ? m.octaveOffset : 0;
   }
 
-  setInstrument(instrument) {
+  get _baseGain() {
+    return INSTRUMENT_GAIN[this.instrumentName] ?? 0.8;
+  }
+
+  setInstrument(instrument, name) {
     this.instrument = instrument;
+    this.instrumentName = name || '';
     this._loaded = true;
   }
 
@@ -49,7 +68,11 @@ class MusicianVoice {
     // Grace note duration: very short, steal time from next note
     const GRACE_NOTE_SEC = 0.06;
 
-    let noteTime = startTime;
+    // Humanization: slight per-note random timing jitter (±15ms)
+    // plus a fixed per-musician offset so voices aren't perfectly aligned
+    const baseOffset = this._humanizeOffset;
+
+    let noteTime = startTime + baseOffset;
     for (let i = 0; i < pattern.length; i++) {
       const event = pattern[i];
       let noteDurSec;
@@ -64,12 +87,17 @@ class MusicianVoice {
       if (event.note !== 0 && event.note !== undefined) {
         const midi = event.note + this.octaveOffset;
         const noteName = midiToNoteName(midi);
-        const when = noteTime;
+        // Per-note jitter: small random offset
+        const jitter = (Math.random() - 0.5) * 0.03; // ±15ms
+        const when = Math.max(noteTime + jitter, audioCtxTime);
         const dur = Math.max(noteDurSec * 0.95, 0.03);
 
         if (when >= audioCtxTime - 0.01) {
           try {
-            const gain = event.duration === 0 ? 0.8 : 1.2; // grace notes slightly softer
+            const baseVol = this._baseGain;
+            const gain = event.duration === 0
+              ? baseVol * 0.7   // grace notes softer
+              : baseVol * 1.0;  // normal notes at instrument volume
             const node = this.instrument.play(noteName, when, { duration: dur, gain });
             if (node) this._activeNodes.push(node);
           } catch (e) {
@@ -168,7 +196,7 @@ export class AudioEngine {
       const instrumentName = CONFIG.musicians[i].instrument;
       const inst = this._loadedInstrumentCache[instrumentName];
       if (inst) {
-        this.voices[i].setInstrument(inst);
+        this.voices[i].setInstrument(inst, instrumentName);
       }
     }
 
