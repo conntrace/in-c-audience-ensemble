@@ -72,6 +72,10 @@ class App {
       // Space to start/pause
       if (e.code === 'Space' && !this.operatorPanel.visible) {
         e.preventDefault();
+        // Dismiss start overlay if visible
+        if (this._overlay && !this._overlay.classList.contains('hidden')) {
+          this._overlay.classList.add('hidden');
+        }
         if (this.running) {
           this.pause();
         } else {
@@ -79,6 +83,24 @@ class App {
         }
       }
     });
+
+    // Start overlay — play/demo button
+    const overlay = document.getElementById('start-overlay');
+    const playBtn = document.getElementById('btn-play-demo');
+    if (playBtn) {
+      playBtn.addEventListener('click', async () => {
+        overlay.classList.add('hidden');
+        await this.start();
+        if (!this.demoMode.active) {
+          this.demoMode.start();
+          this.operatorPanel.updateDemoButton(true);
+          this._updateStatus();
+        }
+      });
+    }
+
+    // Space also dismisses the overlay and starts manually (no demo)
+    this._overlay = overlay;
 
     // Sync operator panel with loaded config
     this.operatorPanel.syncFromConfig();
