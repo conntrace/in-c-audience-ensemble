@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>In C — Admin: Musician Configuration</title>
+  <link rel="stylesheet" href="css/admin.css">
+</head>
+<body>
+  <div id="admin-app">
+    <header>
+      <div class="header-left">
+        <a href="index.html" class="back-link">&larr; Back to Performance</a>
+        <h1>Musician Configuration</h1>
+      </div>
+      <div class="header-actions">
+        <button class="btn" id="btn-reset-defaults">Reset to Defaults</button>
+        <button class="btn primary" id="btn-save">Save &amp; Return</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- Global Settings -->
+      <section class="settings-section">
+        <h2 class="section-title">Performance Settings</h2>
+        <div class="settings-grid">
+          <div class="setting-item">
+            <label for="setting-bpm">BPM</label>
+            <input type="number" id="setting-bpm" min="40" max="300" value="120">
+          </div>
+          <div class="setting-item">
+            <label for="setting-spread">Max Spread</label>
+            <input type="number" id="setting-spread" min="1" max="30" value="5">
+          </div>
+          <div class="setting-item">
+            <label for="setting-beats">Beats per Unit</label>
+            <input type="number" id="setting-beats" min="1" max="16" value="4">
+          </div>
+          <div class="setting-item">
+            <label for="setting-end">End Behavior</label>
+            <select id="setting-end">
+              <option value="wrap">Wrap</option>
+              <option value="hold">Hold</option>
+              <option value="resetAll">Reset All</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <!-- Musicians -->
+      <section class="settings-section">
+        <h2 class="section-title">Musicians</h2>
+        <div id="musician-list">
+          <!-- Musician rows rendered by JS -->
+        </div>
+        <button class="btn add-btn" id="btn-add-musician">+ Add Musician</button>
+      </section>
+    </main>
+
+    <footer>
+      <span id="musician-count">10 musicians</span>
+      <span class="footer-hint">Changes are saved to your browser. Click "Save &amp; Return" to apply.</span>
+    </footer>
+  </div>
+
+  <script src="https://unpkg.com/soundfont-player@0.12.0/dist/soundfont-player.min.js"></script>
+  <script type="module" src="js/admin.js"></script>
+</body>
+</html>
