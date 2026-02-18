@@ -72,6 +72,10 @@ class App {
       // Space to start/pause
       if (e.code === 'Space' && !this.operatorPanel.visible) {
         e.preventDefault();
+        // Dismiss start overlay if visible
+        if (this._overlay && !this._overlay.classList.contains('hidden')) {
+          this._overlay.classList.add('hidden');
+        }
         if (this.running) {
           this.pause();
         } else {
@@ -80,13 +84,23 @@ class App {
       }
     });
 
-    // Inline demo play button
-    this._demoBtn = document.getElementById('btn-play-demo');
-    if (this._demoBtn) {
-      this._demoBtn.addEventListener('click', async () => {
-        this._toggleDemo();
+    // Start overlay — play/demo button
+    const overlay = document.getElementById('start-overlay');
+    const playBtn = document.getElementById('btn-play-demo');
+    if (playBtn) {
+      playBtn.addEventListener('click', async () => {
+        overlay.classList.add('hidden');
+        await this.start();
+        if (!this.demoMode.active) {
+          this.demoMode.start();
+          this.operatorPanel.updateDemoButton(true);
+          this._updateStatus();
+        }
       });
     }
+
+    // Space also dismisses the overlay and starts manually (no demo)
+    this._overlay = overlay;
 
     // Sync operator panel with loaded config
     this.operatorPanel.syncFromConfig();
@@ -197,26 +211,7 @@ class App {
     if (!this.running) this.start();
     const active = this.demoMode.toggle();
     this.operatorPanel.updateDemoButton(active);
-    this._updateDemoBtn(active);
     this._updateStatus();
-  }
-
-  _updateDemoBtn(active) {
-    if (!this._demoBtn) return;
-    const playIcon = this._demoBtn.querySelector('.demo-icon-play');
-    const pauseIcon = this._demoBtn.querySelector('.demo-icon-pause');
-    const label = this._demoBtn.querySelector('.demo-label');
-    if (active) {
-      this._demoBtn.classList.add('active');
-      if (playIcon) playIcon.style.display = 'none';
-      if (pauseIcon) pauseIcon.style.display = '';
-      if (label) label.textContent = 'Stop';
-    } else {
-      this._demoBtn.classList.remove('active');
-      if (playIcon) playIcon.style.display = '';
-      if (pauseIcon) pauseIcon.style.display = 'none';
-      if (label) label.textContent = 'Demo';
-    }
   }
 }
 

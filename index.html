@@ -8,6 +8,21 @@
 </head>
 <body>
   <div id="app">
+    <!-- Start Overlay -->
+    <div id="start-overlay">
+      <div class="start-content">
+        <h1 class="start-title">In C</h1>
+        <p class="start-subtitle">The Audience Ensemble</p>
+        <button id="btn-play-demo" class="play-btn" aria-label="Play Demo">
+          <svg viewBox="0 0 64 64" width="64" height="64">
+            <circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" stroke-width="2"/>
+            <polygon points="26,20 26,44 46,32" fill="currentColor"/>
+          </svg>
+        </button>
+        <p class="start-hint">Press to start demo &middot; Space to play manually</p>
+      </div>
+    </div>
+
     <!-- Score Projection -->
     <section id="score-section">
       <canvas id="score-canvas"></canvas>
@@ -16,20 +31,6 @@
     <!-- Button Stations -->
     <section id="button-section">
       <div id="button-row"></div>
-      <div id="demo-row">
-        <button id="btn-play-demo" class="demo-play-btn" aria-label="Play Demo">
-          <svg class="demo-icon-play" viewBox="0 0 48 48" width="36" height="36">
-            <circle cx="24" cy="24" r="22" fill="none" stroke="currentColor" stroke-width="2"/>
-            <polygon points="19,14 19,34 35,24" fill="currentColor"/>
-          </svg>
-          <svg class="demo-icon-pause" viewBox="0 0 48 48" width="36" height="36" style="display:none">
-            <circle cx="24" cy="24" r="22" fill="none" stroke="currentColor" stroke-width="2"/>
-            <rect x="16" y="14" width="5" height="20" fill="currentColor"/>
-            <rect x="27" y="14" width="5" height="20" fill="currentColor"/>
-          </svg>
-          <span class="demo-label">Demo</span>
-        </button>
-      </div>
     </section>
 
     <!-- Status Bar -->
