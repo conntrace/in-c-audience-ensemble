@@ -10,6 +10,7 @@ import {
   loadSoundfontInstrument,
   initToneContext,
 } from './instrument-sources.js';
+import { PIECES, setActivePiece } from './patterns.js';
 
 class AdminPage {
   constructor() {
@@ -21,6 +22,13 @@ class AdminPage {
   _init() {
     // Load saved config
     CONFIG.load();
+
+    // Apply saved piece selection
+    const piece = PIECES[CONFIG.piece];
+    if (piece) {
+      setActivePiece(CONFIG.piece);
+      CONFIG.totalUnits = piece.totalUnits;
+    }
 
     // Populate settings inputs from CONFIG
     this._syncSettingsUI();
@@ -40,6 +48,18 @@ class AdminPage {
     });
     document.getElementById('setting-end').addEventListener('change', (e) => {
       CONFIG.endBehavior = e.target.value;
+    });
+
+    // Piece selector
+    document.getElementById('setting-piece').addEventListener('change', (e) => {
+      const pieceId = e.target.value;
+      const piece = PIECES[pieceId];
+      if (!piece) return;
+      setActivePiece(pieceId);
+      CONFIG.piece = pieceId;
+      CONFIG.totalUnits = piece.totalUnits;
+      CONFIG.bpm = piece.defaultBpm;
+      document.getElementById('setting-bpm').value = CONFIG.bpm;
     });
 
     // Audio source selector
@@ -86,6 +106,7 @@ class AdminPage {
     document.getElementById('setting-spread').value = CONFIG.maxSpread;
     document.getElementById('setting-end').value = CONFIG.endBehavior;
     document.getElementById('setting-audio-source').value = CONFIG.audioSource;
+    document.getElementById('setting-piece').value = CONFIG.piece;
   }
 
   _renderAll() {

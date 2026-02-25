@@ -28,7 +28,8 @@ js/app.js               — Main application, wires all modules, handles source 
 js/config.js            — Global config, musician definitions, persistence (localStorage)
 js/audio-engine.js      — Dual-source playback, MusicianVoice self-scheduling loops
 js/instrument-sources.js — Audio source abstraction: adapter, sample maps, loaders, name mappings
-js/patterns.js          — All 54 patterns (0=silence, 1-53=music) as MIDI note events
+js/patterns.js          — Piece registry: imports all pieces, exports active PATTERNS, setActivePiece()
+js/glade-patterns.js    — "The Glade" — 45 original patterns in D major
 js/ensemble.js          — Ensemble state: MaxSpread, deadlock detection, opening gate
 js/musician.js          — Per-musician state machine (current unit, advance queue, cooldown)
 js/clock.js             — Elapsed-time tracker for UI display
@@ -40,7 +41,9 @@ js/demo-mode.js         — Auto-play mode, randomly advances eligible musicians
 
 ### Key Concepts
 
-**Units vs Patterns:** `currentUnit` is 1-indexed. Pattern index = `currentUnit - 1`. So unit 1 = Pattern 0 (silence), unit 2 = Pattern 1 (first sound), etc. `totalUnits = 54`.
+**Units vs Patterns:** `currentUnit` is 1-indexed. Pattern index = `currentUnit - 1`. So unit 1 = Pattern 0 (silence), unit 2 = Pattern 1 (first sound), etc. `totalUnits` varies by piece (In C = 54, The Glade = 46).
+
+**Piece System:** `patterns.js` is a registry that imports all piece files. `PATTERNS` is a live `export let` binding reassigned by `setActivePiece(pieceId)`. Each piece in `PIECES` defines: `name`, `composer`, `patterns` array, `totalUnits`, `defaultBpm`. `CONFIG.piece` persists the selection.
 
 **Advance Flow:**
 1. Button press (or demo tick) → `ensemble.tryAdvance(id)` → `ensemble.isEligible(id)` checks
@@ -298,18 +301,47 @@ Fixed a race condition where musicians could slip past the opening gate. The eli
 
 ---
 
-## Current State (v1.1.2)
+### v2.0.0 — "The Glade" + Multi-Piece Support
+**Commit:** TBD | **Date:** 2026-02-25
 
+Added an original composition, "The Glade," and the infrastructure to switch between pieces at runtime.
+
+**The Glade** — an original 45-pattern piece in D major at 100 BPM. Inspired by a warm old-growth forest where light gradually breaks through the canopy until a deer steps into a sunlit glade.
+
+| Section | Patterns | Register | Feel |
+|---------|----------|----------|------|
+| Dark Forest | 1-12 | D2-B3 | Low drones, sparse, slow |
+| Light Breaking Through | 13-24 | A3-B4 | Fragments of melody emerge, energy builds |
+| Forest Fully Lit | 25-36 | D4-F#5 | Full flowing melodies, luminous peak |
+| The Glade | 37-45 | A3→D3 | Simplifying, calming, converges to a single held D |
+
+**Multi-piece architecture:**
+- `patterns.js` becomes a piece registry with `PIECES` object, `setActivePiece()`, and a live-binding `PATTERNS` export
+- `glade-patterns.js` — new file containing all 46 Glade patterns (0=silence + 45 music)
+- `config.js` — added `piece` property (`'in-c'` | `'the-glade'`), persisted to localStorage
+- Each piece defines: name, patterns, totalUnits, defaultBpm
+- Switching pieces resets the ensemble, updates totalUnits and BPM, syncs all UI
+- Piece selector added to both operator panel and admin page
+
+**Files changed/created:**
+- NEW: `js/glade-patterns.js`
+- Modified: `js/patterns.js`, `js/config.js`, `js/app.js`, `js/operator-panel.js`, `js/admin.js`, `index.html`, `admin.html`
+
+---
+
+## Current State (v2.0.0)
+
+- **Two pieces:** In C (Terry Riley, 53 patterns, C major, 120 BPM) and The Glade (original, 45 patterns, D major, 100 BPM)
 - **10 default musicians:** French horn, trombone, trumpet, tuba, contrabass (x2), cello, viola, string ensemble (x2)
-- **54 patterns:** 0 (silence) + 53 music patterns, all verified against original score
-- **120 BPM**, max spread 3, natural per-musician timing
 - **Two audio sources:** SoundFont (128 instruments) or Tone.js (20 instruments), selectable at runtime
 - **Opening gate:** All musicians must reach Pattern 1 before any can advance further
+- **Per-musician natural-duration timing** with max spread 3
+- **Piece selector** in operator panel and admin page — switching resets ensemble and updates BPM
 - **Hosted on GitHub Pages**
-- **Admin page** (`admin.html`) for full musician/instrument/source configuration
+- **Admin page** (`admin.html`) for full musician/instrument/source/piece configuration
 - **Demo mode** for hands-free auto-play (D key or overlay button)
 - **Humanization:** Per-instrument volume balancing, per-musician timing offset, per-note jitter
-- **All settings persist** to localStorage across sessions
+- **All settings persist** to localStorage across sessions (including piece selection)
 
 ---
 

@@ -10,6 +10,7 @@ import { AudioEngine } from './audio-engine.js';
 import { OperatorPanel } from './operator-panel.js';
 import { DemoMode } from './demo-mode.js';
 import { mapInstrumentToSource } from './instrument-sources.js';
+import { PIECES, setActivePiece } from './patterns.js';
 
 class App {
   constructor() {
@@ -28,6 +29,13 @@ class App {
   init() {
     // Load saved musician config from localStorage
     CONFIG.load();
+
+    // Apply saved piece selection (sets active patterns and totalUnits)
+    const piece = PIECES[CONFIG.piece];
+    if (piece) {
+      setActivePiece(CONFIG.piece);
+      CONFIG.totalUnits = piece.totalUnits;
+    }
 
     // Create AudioContext (lazy — needs user gesture)
     this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -55,6 +63,7 @@ class App {
       onConfigChange: () => this._onConfigChange(),
       onDemoToggle: () => this._toggleDemo(),
       onAudioSourceChange: (source) => this._onAudioSourceChange(source),
+      onPieceChange: (pieceId) => this._onPieceChange(pieceId),
     });
 
     // Wire events — musicians advance independently via audio engine loops
@@ -227,6 +236,32 @@ class App {
 
     // Resume if was running
     if (wasRunning) await this.start();
+    this._updateStatus();
+  }
+
+  _onPieceChange(pieceId) {
+    const piece = PIECES[pieceId];
+    if (!piece) return;
+
+    // Stop and reset
+    this.pause();
+    this.demoMode.stop();
+    this.operatorPanel.updateDemoButton(false);
+
+    // Switch piece
+    setActivePiece(pieceId);
+    CONFIG.piece = pieceId;
+    CONFIG.totalUnits = piece.totalUnits;
+    CONFIG.bpm = piece.defaultBpm;
+    CONFIG.save();
+
+    // Reset ensemble to unit 1
+    this.ensemble.reset();
+    this.clock.reset();
+
+    // Sync UI with new config values
+    this.operatorPanel.syncFromConfig();
+    this._updateUI();
     this._updateStatus();
   }
 

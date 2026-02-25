@@ -1,21 +1,26 @@
-// In C: Audience Ensemble — All 53 Patterns transcribed from Terry Riley's score
+// Audience Ensemble — Pattern Registry
+//
+// Supports multiple pieces. The active piece's patterns are exported as PATTERNS.
+// Use setActivePiece(pieceId) to switch.
 //
 // Each pattern is an array of note events: { note, duration }
-// - note: MIDI note number (C4=60, D4=62, E4=64, F4=65, G4=67, A4=69, Bb4=70, B4=71, C5=72, etc.)
-//         Use 0 for rests. Use -1 for grace notes (very short, nearly zero duration).
-// - duration: in eighth-note units (1 = eighth note, 2 = quarter, 4 = half, 6 = dotted half,
-//             8 = whole, 12 = dotted whole, etc.)
-//   Grace notes have duration 0 (they are crushed into the next note).
-//
-// Reference: Cross-verified against Terry Riley's original score, teropa/in-c,
-//            and simondemeule/InChrome implementations.
+// - note: MIDI note number (0 = rest)
+// - duration: in eighth-note units (1 = eighth, 2 = quarter, 4 = half, 8 = whole)
+//   Grace notes have duration 0.
+
+import { GLADE_PATTERNS } from './glade-patterns.js';
+
+// ============================================================================
+// IN C — Terry Riley (1964)
+// 53 patterns, key of C. Cross-verified against original score, teropa/in-c,
+// and simondemeule/InChrome implementations.
 //
 // Note mapping:
 //   C4=60, D4=62, E4=64, F4=65, F#4=66, G4=67, A4=69, Bb4=70, B4=71
-//   C5=72, D5=74, E5=76, F5=77, G5=79
-//   G3=55
+//   C5=72, D5=74, E5=76, F5=77, G5=79, G3=55
+// ============================================================================
 
-export const PATTERNS = [
+const IN_C_PATTERNS = [
 
   // Pattern 0: Silence — all musicians begin here, a moment of stillness
   [
@@ -554,9 +559,40 @@ export const PATTERNS = [
   ],
 ];
 
+// ============================================================================
+// PIECE REGISTRY
+// ============================================================================
+
+export const PIECES = {
+  'in-c': {
+    name: 'In C',
+    composer: 'Terry Riley (1964)',
+    patterns: IN_C_PATTERNS,
+    totalUnits: 54,    // 0 (silence) + 53 patterns
+    defaultBpm: 120,
+  },
+  'the-glade': {
+    name: 'The Glade',
+    composer: 'Original composition',
+    patterns: GLADE_PATTERNS,
+    totalUnits: 46,    // 0 (silence) + 45 patterns
+    defaultBpm: 100,
+  },
+};
+
+// Active patterns — reassigned by setActivePiece()
+export let PATTERNS = IN_C_PATTERNS;
+
+export function setActivePiece(pieceId) {
+  const piece = PIECES[pieceId];
+  if (!piece) return;
+  PATTERNS = piece.patterns;
+}
+
 // Compute the total duration (in eighth-note units) of each pattern
 export function getPatternDuration(patternIndex) {
   const pattern = PATTERNS[patternIndex];
+  if (!pattern) return 0;
   return pattern.reduce((sum, note) => sum + note.duration, 0);
 }
 

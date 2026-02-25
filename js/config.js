@@ -102,8 +102,11 @@ export const CONFIG = {
   // Audio source: 'soundfont' (128 GM instruments) or 'tonejs' (20 sampled instruments)
   audioSource: 'soundfont',
 
-  // Composition
-  totalUnits: 54,  // 0 (silence) + 53 patterns
+  // Piece selection: 'in-c' or 'the-glade'
+  piece: 'in-c',
+
+  // Composition — totalUnits is set dynamically when piece changes
+  totalUnits: 54,
   endBehavior: 'wrap',
 
   // Ensemble rules
@@ -162,6 +165,7 @@ export const CONFIG = {
         maxSpread: this.maxSpread,
         endBehavior: this.endBehavior,
         audioSource: this.audioSource,
+        piece: this.piece,
       }));
     } catch (e) {
       console.warn('Failed to save config:', e);
@@ -186,6 +190,7 @@ export const CONFIG = {
         if (s.maxSpread) this.maxSpread = s.maxSpread;
         if (s.endBehavior) this.endBehavior = s.endBehavior;
         if (s.audioSource) this.audioSource = s.audioSource;
+        if (s.piece) this.piece = s.piece;
         loaded = true;
       }
     } catch (e) {
@@ -200,6 +205,8 @@ export const CONFIG = {
     this.maxSpread = 3;
     this.endBehavior = 'wrap';
     this.audioSource = 'soundfont';
+    this.piece = 'in-c';
+    this.totalUnits = 54;
     localStorage.removeItem(STORAGE_KEY);
     localStorage.removeItem(STORAGE_KEY_SETTINGS);
   },

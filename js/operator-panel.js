@@ -43,6 +43,9 @@ export class OperatorPanel {
     document.getElementById('op-audio-source').addEventListener('change', (e) => {
       this.callbacks.onAudioSourceChange?.(e.target.value);
     });
+    document.getElementById('op-piece').addEventListener('change', (e) => {
+      this.callbacks.onPieceChange?.(e.target.value);
+    });
 
     // Demo toggle
     document.getElementById('op-demo').addEventListener('click', () => {
@@ -81,5 +84,6 @@ export class OperatorPanel {
     document.getElementById('op-spread').value = CONFIG.maxSpread;
     document.getElementById('op-end-behavior').value = CONFIG.endBehavior;
     document.getElementById('op-audio-source').value = CONFIG.audioSource;
+    document.getElementById('op-piece').value = CONFIG.piece;
   }
 }
