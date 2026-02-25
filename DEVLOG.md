@@ -302,7 +302,7 @@ Fixed a race condition where musicians could slip past the opening gate. The eli
 ---
 
 ### v2.0.0 — "The Glade" + Multi-Piece Support
-**Commit:** TBD | **Date:** 2026-02-25
+**Commit:** `9c21c11` | **Date:** 2026-02-25
 
 Added an original composition, "The Glade," and the infrastructure to switch between pieces at runtime.
 
