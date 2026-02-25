@@ -329,7 +329,34 @@ Added an original composition, "The Glade," and the infrastructure to switch bet
 
 ---
 
-## Current State (v2.0.0)
+### v2.1.0 — The Glade Composition Rewrite
+**Commit:** `TBD` | **Date:** 2026-02-25
+
+Complete rewrite of The Glade's 45 patterns. The v2.0.0 composition was rhythmically flat (almost entirely quarters and halves), melodically predictable (scales and arpeggios), and harmonically safe (pure D major). The rewrite applies techniques from In C to create patterns that actually interlock and create interesting textures when layered.
+
+**What changed:**
+
+| Technique | v2.0.0 | v2.1.0 |
+|-----------|--------|--------|
+| Rhythmic variety | Mostly quarters/halves | Grace notes, sixteenths, dotted rhythms, syncopation |
+| Pattern length range | 4–16 eighths | 1–34 eighths |
+| Chromatic tension | None (pure D major) | C natural (♭7 Mixolydian), C# (leading tone), B♭ (♭6 shadow) |
+| Memorable hooks | Scales/arpeggios | Forest call (P1), bird call (P10), Light Theme (P21), Lit Forest theme (P27) |
+| Structural devices | None | Accumulating Descent (P28–31), epic journey patterns (P24, P34) |
+| Rest/space usage | Minimal | Patterns 3, 19 are mostly silence; bursts emerge unpredictably |
+| Interlocking potential | Patterns stack as chord exercises | Short ostinatos (P8, P14, P16) weave against long melodies (P15, P24, P34) |
+
+**Key compositional features:**
+- **Pattern 1** (forest call): Grace-note D2 → A2 dotted half. Signature gesture like In C's C-E grace note. Gives rhythmic identity.
+- **Pattern 8** (dark shimmer): C3-D3 sixteenths. Only 1 eighth note long — loops as a tremolo. C natural establishes Mixolydian darkness.
+- **Patterns 28–31** (accumulating descent): Each adds one note to a cascading D5→F#4 scale, inspired by In C patterns 22–26. Staggered musicians create waterfall textures.
+- **Pattern 24** (big journey): 34 eighth notes with three internal sections and a C5 climax. Like In C's epic Pattern 35.
+- **Pattern 33** (B♭ intrusion): Single appearance of the flattened 6th. A brief dramatic shadow.
+- **Section 4 ending**: Maintains rhythmic interest (heartbeat rests, leading-tone sigh) while converging to held D.
+
+---
+
+## Current State (v2.1.0)
 
 - **Two pieces:** In C (Terry Riley, 53 patterns, C major, 120 BPM) and The Glade (original, 45 patterns, D major, 100 BPM)
 - **10 default musicians:** French horn, trombone, trumpet, tuba, contrabass (x2), cello, viola, string ensemble (x2)
