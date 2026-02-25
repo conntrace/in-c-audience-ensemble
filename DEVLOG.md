@@ -1,14 +1,14 @@
 # In C: The Audience Ensemble — Development Log
 
-A living record of every major change to the project, from initial prototype to current state.
+A living record of every major change to the project, from initial prototype to current state. This document contains all context needed to continue development in a new session.
 
 ---
 
 ## Project Overview
 
-**What:** An interactive web-based reimagining of Terry Riley's *In C* (1964) where audience members control an ensemble of 10+ configurable musicians through button presses.
+**What:** An interactive web-based reimagining of Terry Riley's *In C* (1964) where audience members control an ensemble of 10+ configurable musicians through button presses. Each button advances one musician to the next pattern. The piece unfolds as a collaborative, emergent performance.
 
-**Stack:** Vanilla HTML/CSS/JS (ES modules), Web Audio API, soundfont-player (MusyngKite samples), GitHub Pages hosting.
+**Stack:** Vanilla HTML/CSS/JS (ES modules), Web Audio API, soundfont-player v0.12.0 (MusyngKite CDN), Tone.js v14.7.77 (tonejs-instruments samples), GitHub Pages hosting.
 
 **Repo:** https://github.com/conntrace/in-c-audience-ensemble
 **Live:** https://conntrace.github.io/in-c-audience-ensemble/
@@ -17,23 +17,86 @@ A living record of every major change to the project, from initial prototype to 
 
 ## Architecture
 
+### File Map
+
 ```
-index.html          — Main performance page
-admin.html          — Musician/settings configuration page
-css/styles.css      — Performance page styles
-css/admin.css       — Admin page styles
-js/app.js           — Main application, wires all modules together
-js/config.js        — Global config, musician definitions, persistence (localStorage)
-js/audio-engine.js  — SoundFont playback, per-musician voice loops
-js/patterns.js      — All 54 patterns (0=silence, 1-53=music) transcribed from score
-js/ensemble.js      — Ensemble state manager, MaxSpread enforcement, deadlock detection
-js/musician.js      — Per-musician state machine (current unit, advance queue, cooldown)
-js/clock.js         — Elapsed-time tracker for UI display
+index.html              — Main performance page (Tone.js CDN, audio source selector in operator panel)
+admin.html              — Musician/settings configuration page (Tone.js CDN, audio source selector)
+css/styles.css          — Performance page styles
+css/admin.css           — Admin page styles
+js/app.js               — Main application, wires all modules, handles source switching
+js/config.js            — Global config, musician definitions, persistence (localStorage)
+js/audio-engine.js      — Dual-source playback, MusicianVoice self-scheduling loops
+js/instrument-sources.js — Audio source abstraction: adapter, sample maps, loaders, name mappings
+js/patterns.js          — All 54 patterns (0=silence, 1-53=music) as MIDI note events
+js/ensemble.js          — Ensemble state: MaxSpread, deadlock detection, opening gate
+js/musician.js          — Per-musician state machine (current unit, advance queue, cooldown)
+js/clock.js             — Elapsed-time tracker for UI display
 js/button-controller.js — Keyboard/click input, button station rendering
-js/score-display.js — Canvas-based score projection with animated markers
-js/operator-panel.js — Escape-key config overlay (BPM, spread, transport, demo)
-js/demo-mode.js     — Auto-play mode, randomly advances eligible musicians
+js/score-display.js     — Canvas-based score projection with animated markers
+js/operator-panel.js    — Escape-key config overlay (BPM, spread, transport, demo, audio source)
+js/demo-mode.js         — Auto-play mode, randomly advances eligible musicians
 ```
+
+### Key Concepts
+
+**Units vs Patterns:** `currentUnit` is 1-indexed. Pattern index = `currentUnit - 1`. So unit 1 = Pattern 0 (silence), unit 2 = Pattern 1 (first sound), etc. `totalUnits = 54`.
+
+**Advance Flow:**
+1. Button press (or demo tick) → `ensemble.tryAdvance(id)` → `ensemble.isEligible(id)` checks
+2. If eligible → `musician.queueAdvance()` sets `advanceQueued = true`
+3. On musician's pattern loop completion → `ensemble.onMusicianLoopComplete(id)` → `musician.onLoopComplete()`
+4. If `advanceQueued`, musician advances and enters cooldown (one full pattern play before can advance again)
+
+**Eligibility Rules (in `ensemble.isEligible()`):**
+1. `musician.canAdvance()` — not queued, not in cooldown, not offline
+2. **Opening gate** — if musician is at unit 2+, ALL online musicians must also be at unit 2+ (one-time gate, only applies until everyone reaches Pattern 1)
+3. **Catch-up** — most-behind musicians always eligible (bypass spread check)
+4. **MaxSpread** — advancing can't push `max - min` beyond `CONFIG.maxSpread`
+
+**Opening Gate (double enforcement):**
+- Checked in `isEligible()` to prevent queuing advances past Pattern 1
+- Also checked in `onMusicianLoopComplete()` to cancel any queued advance that slipped through (race condition fix)
+- Uses `_isOpeningGateActive()` helper that checks if all online musicians are at unit 2+
+
+**Audio Engine (per-musician timing):**
+- Each `MusicianVoice` self-schedules via `setTimeout` + AudioContext timestamps
+- Pattern duration = sum of note durations at natural BPM tempo (`eighthNoteSec = 60/bpm/2`)
+- Grace notes (duration 0) = 60ms
+- Lookahead: callback fires ~50ms before loop end for seamless scheduling
+- Humanization: per-musician fixed offset (±20ms), per-note jitter (±15ms), per-instrument gain scaling
+
+**Dual Audio Sources:**
+- `CONFIG.audioSource`: `'soundfont'` (128 GM instruments) or `'tonejs'` (20 sampled instruments)
+- `ToneJSInstrumentAdapter` wraps `Tone.Sampler` to match soundfont-player's `.play()` / `.stop()` interface
+- `MusicianVoice` is source-agnostic — adapter pattern makes source transparent
+- Cache key: `${source}:${name}` prevents cross-source collisions
+- `Tone.setContext(audioCtx)` aligns Tone.js with existing AudioContext
+- `mapInstrumentToSource()` maps between underscore GM names and hyphenated Tone.js names
+- `SOUNDFONT_TO_TONEJS` (128 entries) and `TONEJS_TO_SOUNDFONT` (20 entries) mapping tables
+
+**Config Persistence:** All settings stored in localStorage under `inC_musicians` and `inC_settings`. Includes musician array (label, color, instrument, octaveOffset), bpm, maxSpread, endBehavior, audioSource.
+
+**Keyboard Controls:**
+- `1-0` (and `Q-P` for musicians 11-20): advance musician
+- `Space`: start/pause
+- `D`: toggle demo mode
+- `Escape`: operator panel
+
+### Default Ensemble
+
+| Slot | Label | Instrument | Octave |
+|------|-------|-----------|--------|
+| 0 | A | french_horn | 0 |
+| 1 | B | trombone | 0 |
+| 2 | C | trumpet | 0 |
+| 3 | D | tuba | -12 |
+| 4 | E | contrabass | -12 |
+| 5 | F | contrabass | 0 |
+| 6 | G | cello | 0 |
+| 7 | H | viola | 0 |
+| 8 | I | string_ensemble_1 | 0 |
+| 9 | J | string_ensemble_1 | -12 |
 
 ---
 
@@ -183,19 +246,6 @@ Reverted the demo button from inline (with musician buttons) back to the full-sc
 
 ---
 
-### v1.1.1 — Opening Gate for Pattern 1
-**Commit:** `bf9c053` | **Date:** 2026-02-18
-
-Added an opening gate to the ensemble eligibility system. All online musicians must reach Pattern 1 (the first sounding measure) before any musician can advance beyond it. This mirrors the traditional *In C* performance practice where the ensemble begins together in unison.
-
-- **Gate logic** added to `ensemble.isEligible()` — musicians at unit 2+ are blocked until every online musician has also reached unit 2+
-- Advancing from silence (Pattern 0) to Pattern 1 is always allowed so musicians can catch up
-- Gate is one-time: once all musicians are playing sound, normal spread rules take over
-- Works with both manual presses and demo mode (both go through `isEligible()`)
-- **File changed:** `js/ensemble.js` (9 lines added)
-
----
-
 ### v1.1.0 — Tone.js as Alternative Audio Source
 **Commit:** `912ac21` | **Date:** 2026-02-18
 
@@ -213,29 +263,53 @@ The integration uses an adapter pattern. Both soundfont-player and Tone.js prese
 A `ToneJSInstrumentAdapter` class wraps `Tone.Sampler` to expose the exact same `.play()` interface. This means `MusicianVoice` doesn't need any changes — it can't tell which source it's using.
 
 **New file:** `js/instrument-sources.js` — Contains:
-- Tone.js instrument bank and sample URL maps for all 20 instruments
+- `TONEJS_INSTRUMENT_BANK` — 20 instruments grouped by category
+- `TONEJS_SAMPLE_MAPS` — full note-to-URL maps for all 20 instruments (base URL: `https://nbrosowsky.github.io/tonejs-instruments/samples/`)
 - `ToneJSInstrumentAdapter` class
-- Source-specific loader functions
-- Name mapping tables for switching between sources (e.g., `french_horn` ↔ `french-horn`)
+- `loadSoundfontInstrument()` and `loadToneJSInstrument()` loader functions
+- `SOUNDFONT_TO_TONEJS` (128→20 mapping) and `TONEJS_TO_SOUNDFONT` (20→128 reverse mapping)
+- `mapInstrumentToSource()` helper for switching
+- `initToneContext()` for AudioContext alignment
 
-**Where to switch:**
-- Admin page → Performance Settings → Audio Source dropdown
-- Operator panel (Escape) → Configuration → Audio Source dropdown
-
-When switching sources, all musician instrument assignments are automatically remapped to the closest equivalent in the new source. The selection persists to localStorage.
+**Other files modified:** `config.js` (audioSource property), `audio-engine.js` (branched loading, Tone.js gain table), `app.js` (Tone context init, source switch handler), `operator-panel.js` (source selector), `admin.js` (dynamic instrument dropdown, dual-source preview), `index.html` (Tone.js CDN, selector UI), `admin.html` (Tone.js CDN, selector UI)
 
 ---
 
-## Current State
+### v1.1.1 — Opening Gate for Pattern 1
+**Commit:** `bf9c053` | **Date:** 2026-02-25
+
+Added an opening gate to the ensemble eligibility system. All online musicians must reach Pattern 1 (the first sounding measure) before any musician can advance beyond it. This mirrors the traditional *In C* performance practice where the ensemble begins together in unison.
+
+- **Gate logic** added to `ensemble.isEligible()` — musicians at unit 2+ are blocked until every online musician has also reached unit 2+
+- Advancing from silence (Pattern 0) to Pattern 1 is always allowed so musicians can catch up
+- Gate is one-time: once all musicians are playing sound, normal spread rules take over
+- Works with both manual presses and demo mode (both go through `isEligible()`)
+
+---
+
+### v1.1.2 — Opening Gate Race Condition Fix
+**Commit:** `f294deb` | **Date:** 2026-02-25
+
+Fixed a race condition where musicians could slip past the opening gate. The eligibility-only check wasn't sufficient because an advance could be queued while the musician was still at unit 1, then execute after reaching unit 2.
+
+**Fix:** Added a second gate enforcement in `onMusicianLoopComplete()` — right before `onLoopComplete()` executes, if the musician is at unit 2+ and the gate is still active, any queued advance is cancelled. Extracted shared logic into `_isOpeningGateActive()` helper.
+
+- **File changed:** `js/ensemble.js`
+
+---
+
+## Current State (v1.1.2)
 
 - **10 default musicians:** French horn, trombone, trumpet, tuba, contrabass (x2), cello, viola, string ensemble (x2)
 - **54 patterns:** 0 (silence) + 53 music patterns, all verified against original score
 - **120 BPM**, max spread 3, natural per-musician timing
-- **Two audio sources:** SoundFont (128 instruments) or Tone.js (20 instruments), selectable
+- **Two audio sources:** SoundFont (128 instruments) or Tone.js (20 instruments), selectable at runtime
+- **Opening gate:** All musicians must reach Pattern 1 before any can advance further
 - **Hosted on GitHub Pages**
-- **Admin page** for full musician/instrument/source configuration
-- **Demo mode** for hands-free auto-play
+- **Admin page** (`admin.html`) for full musician/instrument/source configuration
+- **Demo mode** for hands-free auto-play (D key or overlay button)
 - **Humanization:** Per-instrument volume balancing, per-musician timing offset, per-note jitter
+- **All settings persist** to localStorage across sessions
 
 ---
 
