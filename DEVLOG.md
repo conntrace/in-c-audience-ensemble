@@ -330,7 +330,7 @@ Added an original composition, "The Glade," and the infrastructure to switch bet
 ---
 
 ### v2.1.0 — The Glade Composition Rewrite
-**Commit:** `TBD` | **Date:** 2026-02-25
+**Commit:** `221c3b5` | **Date:** 2026-02-25
 
 Complete rewrite of The Glade's 45 patterns. The v2.0.0 composition was rhythmically flat (almost entirely quarters and halves), melodically predictable (scales and arpeggios), and harmonically safe (pure D major). The rewrite applies techniques from In C to create patterns that actually interlock and create interesting textures when layered.
 
