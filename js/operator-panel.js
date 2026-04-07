@@ -8,11 +8,17 @@ export class OperatorPanel {
   constructor(callbacks) {
     this.callbacks = callbacks; // { onStart, onPause, onReset, onConfigChange, onDemoToggle }
     this.panel = document.getElementById('operator-panel');
+    this.content = document.getElementById('operator-content');
+    this.toggleButton = document.getElementById('operator-toggle');
     this.visible = false;
     this._init();
   }
 
   _init() {
+    this.toggleButton?.setAttribute('aria-expanded', 'false');
+    this.toggleButton?.addEventListener('click', () => this.toggle());
+    document.getElementById('op-close')?.addEventListener('click', () => this.hide());
+
     // Transport buttons
     document.getElementById('op-start').addEventListener('click', () => {
       this.callbacks.onStart?.();
@@ -61,11 +67,23 @@ export class OperatorPanel {
       this.callbacks.onDemoToggle?.();
     });
 
-    // Escape key toggles panel
+    // Keyboard shortcuts: O toggles controls, Escape closes them.
     document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
+      const tag = e.target?.tagName;
+      const isTypingTarget = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA';
+
+      if ((e.key === 'o' || e.key === 'O') && !isTypingTarget) {
         e.preventDefault();
         this.toggle();
+      } else if (e.key === 'Escape' && this.visible) {
+        e.preventDefault();
+        this.hide();
+      }
+    });
+
+    this.panel.addEventListener('click', (e) => {
+      if (e.target === this.panel) {
+        this.hide();
       }
     });
   }
@@ -73,11 +91,15 @@ export class OperatorPanel {
   toggle() {
     this.visible = !this.visible;
     this.panel.classList.toggle('visible', this.visible);
+    this.toggleButton?.classList.toggle('active', this.visible);
+    this.toggleButton?.setAttribute('aria-expanded', this.visible ? 'true' : 'false');
   }
 
   hide() {
     this.visible = false;
     this.panel.classList.remove('visible');
+    this.toggleButton?.classList.remove('active');
+    this.toggleButton?.setAttribute('aria-expanded', 'false');
   }
 
   updateDemoButton(active) {

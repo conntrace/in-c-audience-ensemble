@@ -397,21 +397,37 @@ html, body {
   color: var(--text);
 }
 
-.admin-link {
-  color: var(--accent);
-  text-decoration: none;
-  cursor: pointer;
-  padding: 4px 10px;
-  border: 1px solid var(--accent);
-  border-radius: 4px;
+.operator-toggle {
+  position: fixed;
+  right: 18px;
+  bottom: 18px;
+  z-index: 45;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(10, 10, 15, 0.72);
+  color: var(--text-soft);
+  font-family: inherit;
   font-size: 11px;
-  transition: all 0.15s;
-  background: var(--accent-soft);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 9px 14px;
+  cursor: pointer;
+  backdrop-filter: blur(10px);
+  transition: all 0.15s ease;
 }
 
-.admin-link:hover {
-  background: var(--accent);
+.operator-toggle:hover,
+.operator-toggle.active {
   color: #fff;
+  border-color: rgba(255, 107, 53, 0.7);
+  background: rgba(255, 107, 53, 0.18);
+}
+
+.operator-toggle:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 2px rgba(255, 255, 255, 0.18),
+    0 0 0 5px rgba(255, 107, 53, 0.22);
 }
 
 /* Operator Panel Overlay */
@@ -438,10 +454,36 @@ html, body {
   max-width: 600px;
 }
 
-#operator-content h2 {
+.op-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
   margin-bottom: 20px;
+}
+
+#operator-content h2 {
   font-size: 18px;
   color: var(--accent);
+}
+
+.op-close {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg);
+  color: var(--text-soft);
+  font-family: inherit;
+  font-size: 11px;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 7px 12px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.op-close:hover {
+  color: #fff;
+  border-color: var(--accent);
 }
 
 .op-section {
@@ -502,6 +544,26 @@ html, body {
   background: var(--accent);
   color: #fff;
   border-color: var(--accent);
+}
+
+.op-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 1px solid var(--accent);
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  text-decoration: none;
+  font-size: 12px;
+  transition: all 0.15s;
+}
+
+.op-link:hover {
+  background: var(--accent);
+  color: #fff;
 }
 
 .op-hint {
@@ -565,6 +627,11 @@ html, body {
   .station-button {
     width: 56px;
     height: 56px;
+  }
+
+  .operator-toggle {
+    right: 12px;
+    bottom: 12px;
   }
 
   #operator-content {
