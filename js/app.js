@@ -24,6 +24,9 @@ class App {
     this.demoMode = null;
     this.running = false;
     this._instrumentsLoaded = false;
+    this._statusMessage = null;
+    this._noticeMessage = null;
+    this._noticeTimerId = null;
   }
 
   init() {
@@ -70,6 +73,9 @@ class App {
     this.ensemble.addEventListener('stateChange', () => this._updateUI());
     this.ensemble.addEventListener('queued', () => this._updateUI());
     this.ensemble.addEventListener('resetAll', () => this._handleResetAll());
+    this.ensemble.addEventListener('spreadRelaxed', () => {
+      this._flashNotice('Spread lock relaxed temporarily so the ensemble can move again.');
+    });
 
     // Demo mode press feedback
     this.demoMode.onPress((id) => {
@@ -120,6 +126,7 @@ class App {
 
     // Sync operator panel with loaded config
     this.operatorPanel.syncFromConfig();
+    this._syncPieceMeta();
 
     // Periodic UI updater — replaces boundary-driven updates
     // Score display has its own rAF loop; this handles status bar
@@ -175,6 +182,7 @@ class App {
     this.clock.reset();
     this.demoMode.stop();
     this.operatorPanel.updateDemoButton(false);
+    this._flashNotice('Ensemble reset to the opening silence.');
     this._updateUI();
     this._updateStatus();
   }
@@ -188,26 +196,33 @@ class App {
     const spread = this.ensemble.getSpread();
     const minU = this.ensemble.getMinUnit();
     const maxU = this.ensemble.getMaxUnit();
+    const piece = PIECES[CONFIG.piece];
+    const queuedCount = this.ensemble.musicians.filter(m => m.advanceQueued).length;
+    const readyCount = this.ensemble.getEligible().length;
+    const sourceLabel = CONFIG.audioSource === 'tonejs' ? 'Tone.js' : 'SoundFont';
+    const modeLabel = this._statusMessage || (this.running
+      ? (this.demoMode.active ? 'Demo' : 'Running')
+      : 'Stopped');
 
     document.getElementById('status-bpm').textContent = CONFIG.bpm;
     document.getElementById('status-spread').textContent = `${spread} / ${CONFIG.maxSpread}`;
     document.getElementById('status-range').textContent = `${minU} - ${maxU}`;
-    document.getElementById('status-mode').textContent = this.running
-      ? (this.demoMode.active ? 'Demo' : 'Running')
-      : 'Stopped';
+    document.getElementById('status-piece').textContent = piece?.name || CONFIG.piece;
+    document.getElementById('status-mode').textContent = modeLabel;
+    document.getElementById('status-source').textContent = sourceLabel;
     document.getElementById('status-beat').textContent = this.running
       ? this.clock.getElapsedBeats()
       : '-';
+    document.getElementById('hud-piece').textContent = piece?.name || 'Audience Ensemble';
+    document.getElementById('hud-composer').textContent = piece?.composer || '';
+    document.getElementById('hud-note').textContent = this._getHudMessage();
+    document.getElementById('hud-detail').textContent =
+      `${CONFIG.musicianCount} musicians • ${readyCount} ready • ${queuedCount} queued • ${sourceLabel}`;
   }
 
   _setStatusMessage(msg) {
-    const modeEl = document.getElementById('status-mode');
-    if (msg) {
-      modeEl.textContent = msg;
-      modeEl.style.color = '#ff6b35';
-    } else {
-      modeEl.style.color = '';
-    }
+    this._statusMessage = msg;
+    this._updateStatus();
   }
 
   _onConfigChange() {
@@ -223,6 +238,7 @@ class App {
     // Stop immediately so in-flight voice callbacks cannot schedule stale loops.
     this.audioEngine.stop();
     this.clock.reset();
+    this._flashNotice('Everyone reached the end. Restarting from the opening silence.');
     this._updateUI();
     this._updateStatus();
 
@@ -252,6 +268,7 @@ class App {
     await this.audioEngine.loadInstruments();
     this._instrumentsLoaded = true;
     this._setStatusMessage(null);
+    this._flashNotice(`Audio source switched to ${source === 'tonejs' ? 'Tone.js' : 'SoundFont'}.`);
 
     // Resume if was running
     if (wasRunning) await this.start();
@@ -273,6 +290,8 @@ class App {
     CONFIG.totalUnits = piece.totalUnits;
     CONFIG.bpm = piece.defaultBpm;
     CONFIG.save();
+    this._syncPieceMeta();
+    this._flashNotice(`Loaded ${piece.name}.`);
 
     // Reset ensemble to unit 1
     this.ensemble.reset();
@@ -288,7 +307,57 @@ class App {
     if (!this.running) this.start();
     const active = this.demoMode.toggle();
     this.operatorPanel.updateDemoButton(active);
+    this._flashNotice(active
+      ? 'Demo mode is advancing eligible musicians automatically.'
+      : 'Demo mode stopped. Manual audience control is active.');
     this._updateStatus();
+  }
+
+  _syncPieceMeta() {
+    const piece = PIECES[CONFIG.piece];
+    if (!piece) return;
+
+    document.title = `${piece.name}: The Audience Ensemble`;
+    document.querySelector('.start-title').textContent = piece.name;
+    document.getElementById('overlay-piece').textContent = piece.name;
+    document.getElementById('overlay-composer').textContent = piece.composer;
+    document.getElementById('overlay-secondary-hint').textContent =
+      `${CONFIG.musicianCount} musicians share one evolving score.`;
+  }
+
+  _flashNotice(message, durationMs = 3200) {
+    this._noticeMessage = message;
+    if (this._noticeTimerId) {
+      clearTimeout(this._noticeTimerId);
+    }
+    this._noticeTimerId = setTimeout(() => {
+      this._noticeMessage = null;
+      this._noticeTimerId = null;
+      this._updateStatus();
+    }, durationMs);
+    this._updateStatus();
+  }
+
+  _getHudMessage() {
+    if (this._statusMessage) return this._statusMessage;
+    if (this._noticeMessage) return this._noticeMessage;
+    if (!this.running) {
+      return 'Press Space for manual play or use the play button to launch demo mode.';
+    }
+    if (this.ensemble.isOpeningGateActive()) {
+      return 'Opening gate active: everyone must reach the first sounding pattern before moving on.';
+    }
+    if (this.ensemble.isSpreadRelaxed()) {
+      return 'Spread lock is temporarily relaxed so the ensemble can recover from a stall.';
+    }
+    if (this.demoMode.active) {
+      return 'Demo mode is advancing whichever musicians are currently eligible.';
+    }
+    const queuedCount = this.ensemble.musicians.filter(m => m.advanceQueued).length;
+    if (queuedCount > 0) {
+      return `${queuedCount} queued advance${queuedCount === 1 ? '' : 's'} will trigger at the next loop boundary.`;
+    }
+    return 'Audience stations can queue advances whenever a musician becomes eligible.';
   }
 }
 

@@ -13,6 +13,10 @@
       <div class="start-content">
         <h1 class="start-title">In C</h1>
         <p class="start-subtitle">The Audience Ensemble</p>
+        <div class="start-meta">
+          <p class="start-piece" id="overlay-piece">In C</p>
+          <p class="start-composer" id="overlay-composer">Terry Riley (1964)</p>
+        </div>
         <button id="btn-play-demo" class="play-btn" aria-label="Play Demo">
           <svg viewBox="0 0 64 64" width="64" height="64">
             <circle cx="32" cy="32" r="30" fill="none" stroke="currentColor" stroke-width="2"/>
@@ -20,11 +24,24 @@
           </svg>
         </button>
         <p class="start-hint">Press to start demo &middot; Space to play manually</p>
+        <p class="start-secondary-hint" id="overlay-secondary-hint">10 musicians share one evolving score.</p>
       </div>
     </div>
 
     <!-- Score Projection -->
     <section id="score-section">
+      <div id="performance-hud">
+        <div class="hud-card hud-piece-card">
+          <p class="hud-eyebrow">Live Piece</p>
+          <h2 class="hud-title" id="hud-piece">In C</h2>
+          <p class="hud-subtitle" id="hud-composer">Terry Riley (1964)</p>
+        </div>
+        <div class="hud-card hud-state-card">
+          <p class="hud-eyebrow">Ensemble State</p>
+          <p class="hud-state-line" id="hud-note">Press Space for manual play or use the play button to launch demo mode.</p>
+          <p class="hud-detail-line" id="hud-detail">10 musicians • 0 queued • SoundFont</p>
+        </div>
+      </div>
       <canvas id="score-canvas"></canvas>
     </section>
 
@@ -48,8 +65,16 @@
         <span class="status-value" id="status-range">1 - 1</span>
       </div>
       <div class="status-item">
+        <span class="status-label">Piece</span>
+        <span class="status-value" id="status-piece">In C</span>
+      </div>
+      <div class="status-item">
         <span class="status-label">Mode</span>
         <span class="status-value" id="status-mode">Stopped</span>
+      </div>
+      <div class="status-item">
+        <span class="status-label">Source</span>
+        <span class="status-value" id="status-source">SoundFont</span>
       </div>
       <div class="status-item">
         <span class="status-label">Beat</span>

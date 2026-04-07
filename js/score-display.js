@@ -2,6 +2,7 @@
 // Canvas-based score with colored markers for each musician.
 
 import { CONFIG } from './config.js';
+import { PIECES } from './patterns.js';
 
 export class ScoreDisplay {
   constructor(ensemble) {
@@ -61,11 +62,20 @@ export class ScoreDisplay {
     const trackH = H - margin.top - margin.bottom;
     const trackY = margin.top;
 
+    const piece = PIECES[CONFIG.piece];
+
     // Draw title
-    ctx.fillStyle = '#444460';
-    ctx.font = '13px SF Mono, Fira Code, Consolas, monospace';
-    ctx.textAlign = 'center';
-    ctx.fillText('IN C: SCORE PROJECTION', W / 2, 25);
+    ctx.fillStyle = '#f2f1eb';
+    ctx.font = '600 18px Georgia, Times New Roman, serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(piece?.name || 'Score Projection', margin.left, 28);
+    ctx.fillStyle = '#7d7a8f';
+    ctx.font = '11px SF Mono, Fira Code, Consolas, monospace';
+    ctx.fillText(
+      `${piece?.composer || ''} • ${CONFIG.totalUnits} units`,
+      margin.left,
+      46
+    );
 
     // Draw unit grid lines and labels
     const unitWidth = trackW / N;

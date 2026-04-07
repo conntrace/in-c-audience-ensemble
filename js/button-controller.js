@@ -6,7 +6,8 @@ import { CONFIG } from './config.js';
 export class ButtonController {
   constructor(ensemble) {
     this.ensemble = ensemble;
-    this.buttons = []; // DOM elements
+    this.buttons = []; // button DOM elements
+    this.stations = []; // compound station UI
     this._onPress = null; // callback
     this._init();
   }
@@ -17,7 +18,8 @@ export class ButtonController {
       const station = document.createElement('div');
       station.className = 'station';
 
-      const btn = document.createElement('div');
+      const btn = document.createElement('button');
+      btn.type = 'button';
       btn.className = 'station-button ineligible';
       btn.style.setProperty('--station-color', CONFIG.musicianColors[i]);
       btn.dataset.musicianId = i;
@@ -30,14 +32,25 @@ export class ButtonController {
       const key = document.createElement('div');
       key.className = 'station-key';
       const keyLabels = CONFIG.keyLabels;
-      key.textContent = i < keyLabels.length ? `Key: ${keyLabels[i]}` : '';
+      key.textContent = i < keyLabels.length ? `Key ${keyLabels[i]}` : '';
+
+      const unit = document.createElement('div');
+      unit.className = 'station-unit';
+      unit.textContent = 'Unit 1';
+
+      const state = document.createElement('div');
+      state.className = 'station-state';
+      state.textContent = 'Waiting';
 
       station.appendChild(btn);
       station.appendChild(label);
+      station.appendChild(unit);
+      station.appendChild(state);
       station.appendChild(key);
       row.appendChild(station);
 
       this.buttons.push(btn);
+      this.stations.push({ station, btn, label, unit, state, key });
 
       // Click support
       btn.addEventListener('click', () => this._handlePress(i));
@@ -72,9 +85,14 @@ export class ButtonController {
 
   // Update visual state of all buttons based on ensemble state
   updateStates() {
+    const openingGateActive = this.ensemble.isOpeningGateActive();
+    const minUnit = this.ensemble.getMinUnit();
+
     for (let i = 0; i < CONFIG.musicianCount; i++) {
       const m = this.ensemble.musicians[i];
-      const btn = this.buttons[i];
+      const stationUi = this.stations[i];
+      const btn = stationUi.btn;
+      const eligible = this.ensemble.isEligible(i);
 
       btn.classList.remove('eligible', 'queued', 'cooldown', 'ineligible');
 
@@ -84,11 +102,29 @@ export class ButtonController {
         btn.classList.add('queued');
       } else if (m.cooldownActive) {
         btn.classList.add('cooldown');
-      } else if (this.ensemble.isEligible(i)) {
+      } else if (eligible) {
         btn.classList.add('eligible');
       } else {
         btn.classList.add('ineligible');
       }
+
+      stationUi.unit.textContent = `Unit ${m.currentUnit}`;
+      stationUi.state.textContent = this._getStateLabel(m, eligible, openingGateActive, minUnit);
+      btn.setAttribute(
+        'aria-label',
+        `${CONFIG.musicianLabels[i]}, unit ${m.currentUnit}, ${stationUi.state.textContent.toLowerCase()}`
+      );
+      btn.setAttribute('aria-disabled', eligible ? 'false' : 'true');
     }
+  }
+
+  _getStateLabel(musician, eligible, openingGateActive, minUnit) {
+    if (musician.offline) return 'Offline';
+    if (musician.advanceQueued) return 'Queued';
+    if (musician.cooldownActive) return 'Looping';
+    if (eligible) return 'Ready';
+    if (openingGateActive && musician.currentUnit >= 2) return 'Hold';
+    if (musician.currentUnit > minUnit && !this.ensemble.isSpreadRelaxed()) return 'Spread lock';
+    return 'Waiting';
   }
 }
