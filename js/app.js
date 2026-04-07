@@ -69,6 +69,7 @@ class App {
     // Wire events — musicians advance independently via audio engine loops
     this.ensemble.addEventListener('stateChange', () => this._updateUI());
     this.ensemble.addEventListener('queued', () => this._updateUI());
+    this.ensemble.addEventListener('resetAll', () => this._handleResetAll());
 
     // Demo mode press feedback
     this.demoMode.onPress((id) => {
@@ -214,6 +215,24 @@ class App {
     this.scoreDisplay.update();
     this._updateUI();
     this._updateStatus();
+  }
+
+  _handleResetAll() {
+    if (!this.running) return;
+
+    // Stop immediately so in-flight voice callbacks cannot schedule stale loops.
+    this.audioEngine.stop();
+    this.clock.reset();
+    this._updateUI();
+    this._updateStatus();
+
+    setTimeout(() => {
+      if (!this.running) return;
+      this.clock.start();
+      this.audioEngine.start(this.ensemble.musicians);
+      this._updateUI();
+      this._updateStatus();
+    }, 0);
   }
 
   async _onAudioSourceChange(source) {

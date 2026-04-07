@@ -384,8 +384,8 @@ class ToneJSInstrumentAdapter {
   play(noteName, when, options = {}) {
     const { duration = 1, gain = 0.8 } = options;
     try {
-      this.sampler.volume.value = this._gainToDb(gain);
-      this.sampler.triggerAttackRelease(noteName, duration, when);
+      const velocity = Math.max(0, Math.min(1, gain));
+      this.sampler.triggerAttackRelease(noteName, duration, when, velocity);
     } catch (e) {
       // Ignore out-of-range or scheduling errors
     }
@@ -397,11 +397,6 @@ class ToneJSInstrumentAdapter {
         try { sampler.releaseAll(); } catch (_) {}
       }
     };
-  }
-
-  _gainToDb(gain) {
-    if (gain <= 0) return -Infinity;
-    return 20 * Math.log10(gain);
   }
 }
 

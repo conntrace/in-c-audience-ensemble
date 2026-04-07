@@ -4,7 +4,7 @@
 // Each musician loops their pattern independently at natural BPM tempo.
 
 import { CONFIG } from './config.js';
-import { PATTERNS, getPatternDuration } from './patterns.js';
+import { PATTERNS } from './patterns.js';
 import {
   loadSoundfontInstrument,
   loadToneJSInstrument,
@@ -106,8 +106,6 @@ class MusicianVoice {
     if (patternIndex < 0 || patternIndex >= PATTERNS.length) return;
 
     const eighthNoteSec = CONFIG.eighthNoteSec; // Natural tempo from BPM
-    const patternDurationEighths = getPatternDuration(patternIndex);
-
     // Calculate natural pattern duration (accounting for grace notes)
     const pattern = PATTERNS[patternIndex];
     let patternDurationSec = 0;
@@ -256,37 +254,52 @@ export class AudioEngine {
       initToneContext(this.ctx);
     }
 
-    // Determine unique instruments needed
-    const uniqueInstruments = [...new Set(CONFIG.musicians.map(m => m.instrument))];
-
-    // Load unique instruments (use cache when possible)
-    // Cache key is source:name to prevent cross-source collisions
-    for (const name of uniqueInstruments) {
-      const cacheKey = `${source}:${name}`;
-      if (!this._loadedInstrumentCache[cacheKey]) {
-        console.log(`  Loading ${name} (${source})...`);
-        try {
-          let inst;
-          if (source === 'tonejs') {
-            inst = await loadToneJSInstrument(name, this.masterGain);
-          } else {
-            inst = await loadSoundfontInstrument(this.ctx, name, this.masterGain);
+    if (source === 'tonejs') {
+      for (let i = 0; i < CONFIG.musicianCount; i++) {
+        const instrumentName = CONFIG.musicians[i].instrument;
+        const cacheKey = `${source}:voice:${i}:${instrumentName}`;
+        if (!this._loadedInstrumentCache[cacheKey]) {
+          console.log(`  Loading ${instrumentName} for voice ${i + 1} (${source})...`);
+          try {
+            this._loadedInstrumentCache[cacheKey] = await loadToneJSInstrument(
+              instrumentName, this.masterGain
+            );
+            console.log(`  + ${instrumentName} loaded for voice ${i + 1}`);
+          } catch (err) {
+            console.error(`  x Failed to load ${instrumentName} for voice ${i + 1}:`, err);
           }
-          this._loadedInstrumentCache[cacheKey] = inst;
-          console.log(`  + ${name} loaded`);
-        } catch (err) {
-          console.error(`  x Failed to load ${name}:`, err);
+        }
+        const inst = this._loadedInstrumentCache[cacheKey];
+        if (inst) {
+          this.voices[i].setInstrument(inst, instrumentName);
         }
       }
-    }
+    } else {
+      // SoundFont instruments can be shared safely across voices.
+      const uniqueInstruments = [...new Set(CONFIG.musicians.map(m => m.instrument))];
 
-    // Assign cached instruments to voices
-    for (let i = 0; i < CONFIG.musicianCount; i++) {
-      const instrumentName = CONFIG.musicians[i].instrument;
-      const cacheKey = `${source}:${instrumentName}`;
-      const inst = this._loadedInstrumentCache[cacheKey];
-      if (inst) {
-        this.voices[i].setInstrument(inst, instrumentName);
+      for (const name of uniqueInstruments) {
+        const cacheKey = `${source}:${name}`;
+        if (!this._loadedInstrumentCache[cacheKey]) {
+          console.log(`  Loading ${name} (${source})...`);
+          try {
+            this._loadedInstrumentCache[cacheKey] = await loadSoundfontInstrument(
+              this.ctx, name, this.masterGain
+            );
+            console.log(`  + ${name} loaded`);
+          } catch (err) {
+            console.error(`  x Failed to load ${name}:`, err);
+          }
+        }
+      }
+
+      for (let i = 0; i < CONFIG.musicianCount; i++) {
+        const instrumentName = CONFIG.musicians[i].instrument;
+        const cacheKey = `${source}:${instrumentName}`;
+        const inst = this._loadedInstrumentCache[cacheKey];
+        if (inst) {
+          this.voices[i].setInstrument(inst, instrumentName);
+        }
       }
     }
 
