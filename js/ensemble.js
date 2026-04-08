@@ -22,14 +22,6 @@ export class Ensemble extends EventTarget {
     return !allOnline.every(mu => mu.currentUnit >= 2);
   }
 
-  isOpeningGateActive() {
-    return this._isOpeningGateActive();
-  }
-
-  isSpreadRelaxed() {
-    return this._spreadRelaxed;
-  }
-
   // Called when a specific musician's pattern loop completes (per-musician timing)
   onMusicianLoopComplete(musicianId) {
     const m = this.musicians[musicianId];
