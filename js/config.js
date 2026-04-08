@@ -166,7 +166,6 @@ export const CONFIG = {
         endBehavior: this.endBehavior,
         audioSource: this.audioSource,
         piece: this.piece,
-        totalUnits: this.totalUnits,
       }));
     } catch (e) {
       console.warn('Failed to save config:', e);
@@ -192,7 +191,6 @@ export const CONFIG = {
         if (s.endBehavior) this.endBehavior = s.endBehavior;
         if (s.audioSource) this.audioSource = s.audioSource;
         if (s.piece) this.piece = s.piece;
-        if (s.totalUnits) this.totalUnits = s.totalUnits;
         loaded = true;
       }
     } catch (e) {

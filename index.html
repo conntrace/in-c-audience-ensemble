@@ -38,7 +38,7 @@
         </div>
         <div class="hud-card hud-state-card">
           <p class="hud-eyebrow">Ensemble State</p>
-          <p class="hud-state-line" id="hud-note" aria-live="polite">Press Space for manual play or use the play button to launch demo mode.</p>
+          <p class="hud-state-line" id="hud-note">Press Space for manual play or use the play button to launch demo mode.</p>
           <p class="hud-detail-line" id="hud-detail">10 musicians • 0 queued • SoundFont</p>
         </div>
       </div>
@@ -48,14 +48,6 @@
     <!-- Button Stations -->
     <section id="button-section">
       <div id="button-row"></div>
-      <div id="audience-guide">
-        <p id="audience-instructions" class="audience-guide-copy">
-          Press a lit station or matching number key to queue that musician's next move.
-        </p>
-        <p id="audience-legend" class="audience-legend">
-          Ready = can advance • Queued = moves at loop end • Looping = waiting for boundary • Hold / Spread lock = ensemble rule is pausing that station
-        </p>
-      </div>
     </section>
 
     <!-- Status Bar -->
@@ -90,13 +82,7 @@
       </div>
     </div>
 
-    <button
-      id="operator-toggle"
-      class="operator-toggle"
-      type="button"
-      aria-label="Open operator controls"
-      aria-controls="operator-panel"
-    >
+    <button id="operator-toggle" class="operator-toggle" type="button" aria-label="Open operator controls">
       Controls
     </button>
 
@@ -104,15 +90,8 @@
     <div id="operator-panel">
       <div id="operator-content">
         <div class="op-header">
-          <div class="op-header-copy">
-            <h2>Operator Panel</h2>
-            <p class="op-header-note">Operator changes affect the live session immediately, but they stay temporary until you save them as defaults.</p>
-          </div>
-          <div class="op-header-actions">
-            <a href="operator.html" class="op-link route-public-only">Open Operator View</a>
-            <a href="index.html" class="op-link route-operator-only">Audience View</a>
-            <button class="op-close" id="op-close" type="button" aria-label="Close operator panel">Close</button>
-          </div>
+          <h2>Operator Panel</h2>
+          <button class="op-close" id="op-close" type="button" aria-label="Close operator panel">Close</button>
         </div>
 
         <div class="op-section">
@@ -168,21 +147,6 @@
             <label>Auto-play</label>
             <button class="op-btn" id="op-demo">Off</button>
           </div>
-        </div>
-
-        <div class="op-section">
-          <h3>Session Defaults</h3>
-          <p class="op-section-copy" id="op-session-status">Live operator changes are temporary until you save them as defaults.</p>
-          <div class="op-row op-row-actions">
-            <button class="op-btn primary" id="op-save-defaults">Save Session as Defaults</button>
-            <button class="op-btn" id="op-restore-saved">Restore Saved Defaults</button>
-          </div>
-        </div>
-
-        <div class="op-section">
-          <h3>Audio Alerts</h3>
-          <p class="op-section-copy" id="op-alerts-summary" aria-live="polite">Instrument status will appear after the first audio load.</p>
-          <ul id="op-alert-list" class="op-alert-list"></ul>
         </div>
 
         <div class="op-section">

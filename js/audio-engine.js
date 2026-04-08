@@ -223,8 +223,6 @@ export class AudioEngine {
     this._running = false;
     this._loaded = false;
     this._loading = false;
-    this._loadingPromise = null;
-    this._lastLoadReport = null;
     this._loadedInstrumentCache = {}; // cache: instrumentName → instrument object
   }
 
@@ -241,17 +239,7 @@ export class AudioEngine {
 
   // Load all instruments — call this before start
   async loadInstruments() {
-    if (this._loadingPromise) return this._loadingPromise;
-
-    this._loadingPromise = this._loadInstrumentsInternal();
-    try {
-      return await this._loadingPromise;
-    } finally {
-      this._loadingPromise = null;
-    }
-  }
-
-  async _loadInstrumentsInternal() {
+    if (this._loading) return;
     this._loading = true;
     this._loaded = false;
 
@@ -259,89 +247,65 @@ export class AudioEngine {
     this._rebuildVoices();
 
     const source = CONFIG.audioSource;
-    const report = {
-      source,
-      totalVoiceCount: CONFIG.musicianCount,
-      loadedVoiceCount: 0,
-      failures: [],
-    };
-
     console.log(`AudioEngine: Loading instruments (source: ${source})...`);
 
-    try {
-      // Initialize Tone.js context if needed
-      if (source === 'tonejs' && window.Tone) {
-        initToneContext(this.ctx);
-      }
-
-      if (source === 'tonejs') {
-        for (let i = 0; i < CONFIG.musicianCount; i++) {
-          const instrumentName = CONFIG.musicians[i].instrument;
-          const cacheKey = `${source}:voice:${i}:${instrumentName}`;
-          if (!this._loadedInstrumentCache[cacheKey]) {
-            console.log(`  Loading ${instrumentName} for voice ${i + 1} (${source})...`);
-            try {
-              this._loadedInstrumentCache[cacheKey] = await loadToneJSInstrument(
-                instrumentName, this.masterGain
-              );
-              console.log(`  + ${instrumentName} loaded for voice ${i + 1}`);
-            } catch (err) {
-              console.error(`  x Failed to load ${instrumentName} for voice ${i + 1}:`, err);
-            }
-          }
-          this._assignInstrumentToVoice(i, instrumentName, cacheKey, report);
-        }
-      } else {
-        // SoundFont instruments can be shared safely across voices.
-        const uniqueInstruments = [...new Set(CONFIG.musicians.map(m => m.instrument))];
-
-        for (const name of uniqueInstruments) {
-          const cacheKey = `${source}:${name}`;
-          if (!this._loadedInstrumentCache[cacheKey]) {
-            console.log(`  Loading ${name} (${source})...`);
-            try {
-              this._loadedInstrumentCache[cacheKey] = await loadSoundfontInstrument(
-                this.ctx, name, this.masterGain
-              );
-              console.log(`  + ${name} loaded`);
-            } catch (err) {
-              console.error(`  x Failed to load ${name}:`, err);
-            }
-          }
-        }
-
-        for (let i = 0; i < CONFIG.musicianCount; i++) {
-          const instrumentName = CONFIG.musicians[i].instrument;
-          const cacheKey = `${source}:${instrumentName}`;
-          this._assignInstrumentToVoice(i, instrumentName, cacheKey, report);
-        }
-      }
-    } finally {
-      this._loaded = report.loadedVoiceCount > 0;
-      this._loading = false;
-      this._lastLoadReport = report;
+    // Initialize Tone.js context if needed
+    if (source === 'tonejs' && window.Tone) {
+      initToneContext(this.ctx);
     }
 
-    console.log(
-      `AudioEngine: Instrument load complete (${report.loadedVoiceCount}/${report.totalVoiceCount} voices ready)`
-    );
-    return report;
-  }
+    if (source === 'tonejs') {
+      for (let i = 0; i < CONFIG.musicianCount; i++) {
+        const instrumentName = CONFIG.musicians[i].instrument;
+        const cacheKey = `${source}:voice:${i}:${instrumentName}`;
+        if (!this._loadedInstrumentCache[cacheKey]) {
+          console.log(`  Loading ${instrumentName} for voice ${i + 1} (${source})...`);
+          try {
+            this._loadedInstrumentCache[cacheKey] = await loadToneJSInstrument(
+              instrumentName, this.masterGain
+            );
+            console.log(`  + ${instrumentName} loaded for voice ${i + 1}`);
+          } catch (err) {
+            console.error(`  x Failed to load ${instrumentName} for voice ${i + 1}:`, err);
+          }
+        }
+        const inst = this._loadedInstrumentCache[cacheKey];
+        if (inst) {
+          this.voices[i].setInstrument(inst, instrumentName);
+        }
+      }
+    } else {
+      // SoundFont instruments can be shared safely across voices.
+      const uniqueInstruments = [...new Set(CONFIG.musicians.map(m => m.instrument))];
 
-  _assignInstrumentToVoice(voiceIndex, instrumentName, cacheKey, report) {
-    const inst = this._loadedInstrumentCache[cacheKey];
-    if (inst) {
-      this.voices[voiceIndex].setInstrument(inst, instrumentName);
-      report.loadedVoiceCount += 1;
-      return;
+      for (const name of uniqueInstruments) {
+        const cacheKey = `${source}:${name}`;
+        if (!this._loadedInstrumentCache[cacheKey]) {
+          console.log(`  Loading ${name} (${source})...`);
+          try {
+            this._loadedInstrumentCache[cacheKey] = await loadSoundfontInstrument(
+              this.ctx, name, this.masterGain
+            );
+            console.log(`  + ${name} loaded`);
+          } catch (err) {
+            console.error(`  x Failed to load ${name}:`, err);
+          }
+        }
+      }
+
+      for (let i = 0; i < CONFIG.musicianCount; i++) {
+        const instrumentName = CONFIG.musicians[i].instrument;
+        const cacheKey = `${source}:${instrumentName}`;
+        const inst = this._loadedInstrumentCache[cacheKey];
+        if (inst) {
+          this.voices[i].setInstrument(inst, instrumentName);
+        }
+      }
     }
 
-    report.failures.push({
-      voiceIndex,
-      label: CONFIG.musicianLabels[voiceIndex] || `Voice ${voiceIndex + 1}`,
-      instrumentName,
-      message: 'Sample set could not be loaded.',
-    });
+    this._loaded = true;
+    this._loading = false;
+    console.log('AudioEngine: All instruments loaded!');
   }
 
   // Start all musician loops independently
@@ -374,9 +338,5 @@ export class AudioEngine {
 
   get isLoaded() {
     return this._loaded;
-  }
-
-  get loadReport() {
-    return this._lastLoadReport;
   }
 }

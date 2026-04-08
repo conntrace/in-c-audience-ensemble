@@ -1,6 +1,3 @@
 .DS_Store
 .claude/
 plan.md
-node_modules/
-playwright-report/
-test-results/
