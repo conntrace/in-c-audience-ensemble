@@ -9,7 +9,7 @@ Live site: [conntrace.github.io/in-c-audience-ensemble](https://conntrace.github
 ## What It Does
 
 - Runs a 10+ musician browser-based ensemble using Web Audio.
-- Includes Terry Riley's *In C* plus an original companion piece, **The Glade**.
+- Includes Terry Riley's *In C* plus original companion pieces, **The Glade** and **Lanterns**.
 - Lets participants advance musicians by keyboard or on-screen station buttons.
 - Enforces ensemble rules like opening-gate synchronization, max spread, and deadlock recovery.
 - Projects the score state as a live canvas visualization.
@@ -39,7 +39,7 @@ There is also an operator panel for live control and an admin page for deeper re
 ### Operator Panel
 
 - Start, pause, and reset transport
-- Switch between **In C** and **The Glade**
+- Switch between **In C**, **The Glade**, and **Lanterns**
 - Adjust BPM
 - Adjust max ensemble spread
 - Choose end behavior
@@ -90,6 +90,7 @@ js/musician.js           Per-musician state machine
 js/audio-engine.js       Playback engine and musician voices
 js/patterns.js           Piece registry and In C patterns
 js/glade-patterns.js     Original companion piece
+js/lanterns-patterns.js  Original companion piece
 js/score-display.js      Canvas score projection
 js/button-controller.js  Audience station UI and keyboard input
 js/operator-panel.js     Live operator controls
