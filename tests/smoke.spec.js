@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-test('public route clamps units for every piece and can save defaults', async ({ page }) => {
+test('public route clamps units to the active piece and can save defaults', async ({ page }) => {
   await page.goto('/');
 
   await expect(page.locator('#start-overlay')).toBeVisible();
@@ -21,16 +21,12 @@ test('public route clamps units for every piece and can save defaults', async ({
   });
   await expect(unitsInput).toHaveValue('46');
 
-  await page.selectOption('#op-piece', 'lanterns');
-  await expect(unitsInput).toHaveAttribute('max', '43');
-  await expect(unitsInput).toHaveValue('43');
-
   await page.locator('#op-save-defaults').click();
   await expect(page.locator('#op-session-status')).toContainText('Saved defaults updated');
 
   const savedSettings = await page.evaluate(() => JSON.parse(localStorage.getItem('inC_settings')));
-  expect(savedSettings.piece).toBe('lanterns');
-  expect(savedSettings.totalUnits).toBe(43);
+  expect(savedSettings.piece).toBe('the-glade');
+  expect(savedSettings.totalUnits).toBe(46);
 });
 
 test('operator route pins the control surface', async ({ page }) => {

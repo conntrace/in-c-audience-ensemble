@@ -9,7 +9,6 @@
 //   Grace notes have duration 0.
 
 import { GLADE_PATTERNS } from './glade-patterns.js';
-import { LANTERNS_PATTERNS } from './lanterns-patterns.js';
 
 // ============================================================================
 // IN C — Terry Riley (1964)
@@ -578,13 +577,6 @@ export const PIECES = {
     patterns: GLADE_PATTERNS,
     totalUnits: 46,    // 0 (silence) + 45 patterns
     defaultBpm: 100,
-  },
-  'lanterns': {
-    name: 'Lanterns',
-    composer: 'Original composition',
-    patterns: LANTERNS_PATTERNS,
-    totalUnits: 43,    // 0 (silence) + 42 patterns
-    defaultBpm: 108,
   },
 };
 
