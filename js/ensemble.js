@@ -41,7 +41,7 @@ export class Ensemble extends EventTarget {
       if (allAtEnd) {
         this.reset();
         this.dispatchEvent(new CustomEvent('resetAll'));
-        return { ...result, newUnit: 1, resetAll: true };
+        return result;
       }
     }
 

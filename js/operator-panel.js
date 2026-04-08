@@ -2,7 +2,6 @@
 // Start/pause/reset, config adjustments, toggled with Escape key.
 
 import { CONFIG } from './config.js';
-import { PIECES } from './patterns.js';
 
 export class OperatorPanel {
   constructor(callbacks) {
@@ -30,15 +29,7 @@ export class OperatorPanel {
       this.callbacks.onConfigChange?.();
     });
     document.getElementById('op-units').addEventListener('change', (e) => {
-      const rawValue = parseInt(e.target.value, 10);
-      const maxUnits = this._getCurrentPieceMaxUnits();
-      const minUnits = parseInt(e.target.min, 10) || 1;
-      const fallbackUnits = Math.min(CONFIG.totalUnits, maxUnits);
-      CONFIG.totalUnits = Math.max(
-        minUnits,
-        Math.min(maxUnits, Number.isFinite(rawValue) ? rawValue : fallbackUnits)
-      );
-      e.target.value = CONFIG.totalUnits;
+      CONFIG.totalUnits = parseInt(e.target.value) || 35;
       this.callbacks.onConfigChange?.();
     });
     document.getElementById('op-spread').addEventListener('change', (e) => {
@@ -88,19 +79,11 @@ export class OperatorPanel {
 
   // Sync config inputs with current CONFIG values
   syncFromConfig() {
-    const unitsInput = document.getElementById('op-units');
-    const maxUnits = this._getCurrentPieceMaxUnits();
-    CONFIG.totalUnits = Math.min(CONFIG.totalUnits, maxUnits);
-    unitsInput.max = maxUnits;
     document.getElementById('op-bpm').value = CONFIG.bpm;
-    unitsInput.value = CONFIG.totalUnits;
+    document.getElementById('op-units').value = CONFIG.totalUnits;
     document.getElementById('op-spread').value = CONFIG.maxSpread;
     document.getElementById('op-end-behavior').value = CONFIG.endBehavior;
     document.getElementById('op-audio-source').value = CONFIG.audioSource;
     document.getElementById('op-piece').value = CONFIG.piece;
-  }
-
-  _getCurrentPieceMaxUnits() {
-    return PIECES[CONFIG.piece]?.totalUnits ?? CONFIG.totalUnits;
   }
 }
