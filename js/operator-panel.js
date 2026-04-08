@@ -6,18 +6,29 @@ import { PIECES } from './patterns.js';
 
 export class OperatorPanel {
   constructor(callbacks) {
-    this.callbacks = callbacks; // { onStart, onPause, onReset, onConfigChange, onDemoToggle }
+    this.callbacks = callbacks;
     this.panel = document.getElementById('operator-panel');
     this.content = document.getElementById('operator-content');
     this.toggleButton = document.getElementById('operator-toggle');
-    this.visible = false;
+    this.sessionStatus = document.getElementById('op-session-status');
+    this.restoreButton = document.getElementById('op-restore-saved');
+    this.alertSummary = document.getElementById('op-alerts-summary');
+    this.alertList = document.getElementById('op-alert-list');
+    this.isPinned = document.body.classList.contains('operator-route');
+    this.visible = this.isPinned;
     this._init();
   }
 
   _init() {
-    this.toggleButton?.setAttribute('aria-expanded', 'false');
+    this.toggleButton?.setAttribute('aria-expanded', this.visible ? 'true' : 'false');
     this.toggleButton?.addEventListener('click', () => this.toggle());
     document.getElementById('op-close')?.addEventListener('click', () => this.hide());
+    document.getElementById('op-save-defaults')?.addEventListener('click', () => {
+      this.callbacks.onSaveDefaults?.();
+    });
+    this.restoreButton?.addEventListener('click', () => {
+      this.callbacks.onRestoreDefaults?.();
+    });
 
     // Transport buttons
     document.getElementById('op-start').addEventListener('click', () => {
@@ -72,23 +83,33 @@ export class OperatorPanel {
       const tag = e.target?.tagName;
       const isTypingTarget = tag === 'INPUT' || tag === 'SELECT' || tag === 'TEXTAREA';
 
-      if ((e.key === 'o' || e.key === 'O') && !isTypingTarget) {
+      if ((e.key === 'o' || e.key === 'O') && !isTypingTarget && !this.isPinned) {
         e.preventDefault();
         this.toggle();
-      } else if (e.key === 'Escape' && this.visible) {
+      } else if (e.key === 'Escape' && this.visible && !this.isPinned) {
         e.preventDefault();
         this.hide();
       }
     });
 
     this.panel.addEventListener('click', (e) => {
-      if (e.target === this.panel) {
+      if (!this.isPinned && e.target === this.panel) {
         this.hide();
       }
     });
+
+    if (this.isPinned) {
+      this.panel.classList.add('visible');
+      this.toggleButton?.classList.add('active');
+    }
+  }
+
+  allowsGlobalShortcuts() {
+    return this.isPinned || !this.visible;
   }
 
   toggle() {
+    if (this.isPinned) return;
     this.visible = !this.visible;
     this.panel.classList.toggle('visible', this.visible);
     this.toggleButton?.classList.toggle('active', this.visible);
@@ -96,6 +117,7 @@ export class OperatorPanel {
   }
 
   hide() {
+    if (this.isPinned) return;
     this.visible = false;
     this.panel.classList.remove('visible');
     this.toggleButton?.classList.remove('active');
@@ -112,14 +134,65 @@ export class OperatorPanel {
   syncFromConfig() {
     const unitsInput = document.getElementById('op-units');
     const maxUnits = this._getCurrentPieceMaxUnits();
-    CONFIG.totalUnits = Math.min(CONFIG.totalUnits, maxUnits);
-    unitsInput.max = maxUnits;
+    const minUnits = parseInt(unitsInput.min, 10) || 1;
+    CONFIG.totalUnits = Math.max(minUnits, Math.min(CONFIG.totalUnits, maxUnits));
+    unitsInput.max = String(maxUnits);
     document.getElementById('op-bpm').value = CONFIG.bpm;
     unitsInput.value = CONFIG.totalUnits;
     document.getElementById('op-spread').value = CONFIG.maxSpread;
     document.getElementById('op-end-behavior').value = CONFIG.endBehavior;
     document.getElementById('op-audio-source').value = CONFIG.audioSource;
     document.getElementById('op-piece').value = CONFIG.piece;
+  }
+
+  renderSessionStatus({ dirty = false, hasSavedDefaults = false, message } = {}) {
+    if (!this.sessionStatus) return;
+
+    const defaultMessage = dirty
+      ? 'Live operator changes are temporary until you save them as defaults.'
+      : hasSavedDefaults
+        ? 'Saved defaults are loaded. New operator edits stay temporary until saved again.'
+        : 'No saved defaults yet. This session stays temporary unless you save it.';
+
+    this.sessionStatus.textContent = message || defaultMessage;
+    this.sessionStatus.dataset.tone = dirty ? 'warning' : (hasSavedDefaults ? 'ok' : 'muted');
+
+    if (this.restoreButton) {
+      this.restoreButton.disabled = !hasSavedDefaults;
+      this.restoreButton.setAttribute('aria-disabled', hasSavedDefaults ? 'false' : 'true');
+    }
+  }
+
+  renderAudioWarnings(report) {
+    if (!this.alertSummary || !this.alertList) return;
+
+    this.alertList.innerHTML = '';
+
+    if (!report) {
+      this.alertSummary.textContent = 'Instrument status will appear after the first audio load.';
+      this.alertSummary.dataset.tone = 'muted';
+      return;
+    }
+
+    const sourceLabel = report.source === 'tonejs' ? 'Tone.js' : 'SoundFont';
+    const failures = report.failures ?? [];
+
+    if (failures.length === 0) {
+      this.alertSummary.textContent = `${report.loadedVoiceCount} of ${report.totalVoiceCount} voices are ready via ${sourceLabel}.`;
+      this.alertSummary.dataset.tone = 'ok';
+      return;
+    }
+
+    const loadedSummary = `${report.loadedVoiceCount} of ${report.totalVoiceCount} voices are ready`;
+    this.alertSummary.textContent = `${loadedSummary}. ${failures.length} voice load warning${failures.length === 1 ? '' : 's'} need attention.`;
+    this.alertSummary.dataset.tone = 'warning';
+
+    for (const failure of failures) {
+      const item = document.createElement('li');
+      item.className = 'op-alert-item';
+      item.textContent = `${failure.label} • ${failure.instrumentName} • ${failure.message}`;
+      this.alertList.appendChild(item);
+    }
   }
 
   _getCurrentPieceMaxUnits() {

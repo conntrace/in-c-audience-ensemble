@@ -14,6 +14,10 @@ export class ButtonController {
 
   _init() {
     const row = document.getElementById('button-row');
+    const descriptionIds = ['audience-instructions', 'audience-legend']
+      .filter((id) => document.getElementById(id))
+      .join(' ');
+
     for (let i = 0; i < CONFIG.musicianCount; i++) {
       const station = document.createElement('div');
       station.className = 'station';
@@ -23,6 +27,9 @@ export class ButtonController {
       btn.className = 'station-button ineligible';
       btn.style.setProperty('--station-color', CONFIG.musicianColors[i]);
       btn.dataset.musicianId = i;
+      if (descriptionIds) {
+        btn.setAttribute('aria-describedby', descriptionIds);
+      }
 
       const label = document.createElement('div');
       label.className = 'station-label';
@@ -115,6 +122,7 @@ export class ButtonController {
         `${CONFIG.musicianLabels[i]}, unit ${m.currentUnit}, ${stationUi.state.textContent.toLowerCase()}`
       );
       btn.setAttribute('aria-disabled', eligible ? 'false' : 'true');
+      btn.disabled = !eligible;
     }
   }
 
